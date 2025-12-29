@@ -31,7 +31,7 @@ The tool visualizes the `MerSolver` execution using a Generator-based approach.
 -   **Presets**:
     -   `U-Shape`: Standard heuristic failure case.
     -   `Cross`: Central interaction test.
-    -   `Random`: Random set of segments.
+    -   `Random`: Random set of arbitrary segments (any orientation).
 -   **Actions**:
     -   `Solve`: Runs the algorithm instantly.
     -   `Clear`: Resets the board.

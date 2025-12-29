@@ -5,7 +5,7 @@ A web-based visualizer for the Maximum Empty Rectangle algorithm.
 ## Features
 
 - **Draw Obstacles**: Drag to draw line segments.
-- **Presets**: Load U-Shape, Cross, or Random obstacles.
+- **Presets**: Load U-Shape, Cross, or Random (arbitrary angle) obstacles.
 - **Start/Stop Debugging**: Visualizes the Divide & Conquer process (Split Lines, Active Windows).
 - **Controls**: Play, Pause, Next Step.
 - **Responsive Layout**: Canvas automatically fills the window.
