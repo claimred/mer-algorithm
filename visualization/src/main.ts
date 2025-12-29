@@ -58,13 +58,13 @@ let dragCurrent: Point = { x: 0, y: 0 };
 
 
 // Resize handling
-// Resize handling
 function resize() {
     const parent = canvas.parentElement;
     if (parent) {
         canvas.width = parent.clientWidth;
         canvas.height = parent.clientHeight;
         renderer.resize(canvas.width, canvas.height);
+        state.setBounds(renderer.logicalWidth, renderer.logicalHeight);
         draw();
     }
 }
