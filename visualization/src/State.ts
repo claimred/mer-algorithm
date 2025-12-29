@@ -80,9 +80,13 @@ export class State {
 
     loadRandom(count: number = 10) {
         const obs: Segment[] = [];
+        const margin = 10;
+        const maxX = this.bounds.width - margin;
+        const maxY = this.bounds.height - margin;
+
         for (let i = 0; i < count; i++) {
-            const x = Math.random() * 80 + 10;
-            const y = Math.random() * 80 + 10;
+            const x = Math.random() * (maxX - margin) + margin;
+            const y = Math.random() * (maxY - margin) + margin;
             const len = Math.random() * 15 + 5;
             const angle = Math.random() * Math.PI * 2;
 
@@ -92,5 +96,9 @@ export class State {
             obs.push(new Segment({ x, y }, { x: p2x, y: p2y }));
         }
         this.setObstacles(obs);
+    }
+
+    setBounds(width: number, height: number) {
+        this.bounds = { x: 0, y: 0, width, height };
     }
 }
