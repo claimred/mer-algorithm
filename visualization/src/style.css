@@ -47,6 +47,10 @@ canvas {
     background: #fff;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     cursor: crosshair;
+    display: block;
+    /* Removes bottom margin */
+    width: 100%;
+    height: 100%;
 }
 
 .controls {
