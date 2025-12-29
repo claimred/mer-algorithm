@@ -52,6 +52,12 @@ const stats = document.querySelector<HTMLDivElement>('#stats')!;
 const renderer = new Renderer(canvas);
 const state = new State();
 
+// Interaction State
+let isDragging = false;
+let dragStart: Point | null = null;
+let dragCurrent: Point = { x: 0, y: 0 };
+
+
 // Resize handling
 function resize() {
     canvas.width = canvas.parentElement!.clientWidth;
@@ -101,10 +107,7 @@ function updateStats(msg?: string) {
     `;
 }
 
-// Interaction
-let isDragging = false;
-let dragStart: Point | null = null;
-let dragCurrent: Point = { x: 0, y: 0 };
+
 
 canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
