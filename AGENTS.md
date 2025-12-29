@@ -19,8 +19,7 @@ This repository implements the **Maximum Empty Rectangle (MER)** algorithm for a
 ## Core Architecture
 ### `src/mer_solver.ts`
 The heart of the system.
--   **`solve(bounds, obstacles)`**: Entry point. Uses Divide-and-Conquer.
--   **`divideAndConquerVP/HP`**: Recursive partition based on **Coordinate Median** (to ensure $O(n \log n)$ depth).
+-   **`solveSegments`**: Main iterative solver using an **Explicit Stack**.
 -   **`solveCentral(...)`**: Solves the "Crossing MER" problem using Maximal Empty Stairs.
 -   **`buildStair(...)`**: Constructs the "steps" (intervals) of available space.
 
@@ -50,5 +49,5 @@ npx tsx debug_arbitrary.ts
 Use `debug_arbitrary.ts` for specific geometric scenarios (Diagonal, Diamond, etc.).
 
 ## Future Work
--   **Optimization**: `solveStairInteractions` currently uses a Grid/Corner search. Is theoretically possible to use Monotone Matrix Search or explicit Quadratic Maximization for $O(n)$ speed per merge.
+-   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.
 -   **Visualization**: Update UI to accept Segment inputs.

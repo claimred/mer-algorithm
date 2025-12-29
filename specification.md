@@ -39,4 +39,4 @@ The area of a candidate rectangle formed by two stairs (e.g., in Quadrant 1 and 
     *   `Segment`: Basic geometric primitive.
 
 ### 4.2 Solver
-The `MerSolver` uses explicit recursion with Coordinate Splitting to ensure balanced recursion trees.
+The `MerSolver` uses an **Explicit Stack** with Coordinate Splitting to ensure balanced recursion trees and avoid stack overflow.
