@@ -1,0 +1,19 @@
+{
+  "name": "pmer-ts",
+  "version": "1.0.0",
+  "description": "TypeScript implementation of MER Algorithm",
+  "main": "dist/mer_solver.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^0.30.0",
+    "ts-node": "^10.9.0"
+  }
+}
