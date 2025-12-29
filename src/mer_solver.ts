@@ -62,7 +62,7 @@ function getInternalCoords(segments: Segment[], minVal: number, maxVal: number, 
     // Then we have no "internal" split point.
     // But we might have segments spanning.
 
-    return unique.filter(c => c > minVal + 1e-6 && c < maxVal - 1e-6);
+    return unique.filter(c => c > minVal + 1e-9 && c < maxVal - 1e-9);
 }
 
 function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
