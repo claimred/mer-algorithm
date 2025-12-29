@@ -65,19 +65,21 @@ function getInternalCoords(segments: Segment[], minVal: number, maxVal: number, 
 }
 
 function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
-    if (segments.length < 1) return bounds; // Actually correct? If no segments, entire bounds is empty.
+    if (segments.length < 1) return bounds;
+    // Termination for spatial recursion (avoid infinite depth on spanning segments)
+    if (bounds.width < 0.1) return { ...bounds, width: 0, height: 0 };
 
     // Coordinate Splitting
     const coords = getInternalCoords(segments, bounds.x, bounds.x + bounds.width, true);
+    let VP = 0;
 
-    if (coords.length === 0) {
-        // No vertical endpoints inside. Switch to Horizontal.
-        // This is a "Slab" where only horizontal spanning segments might exist.
-        return divideAndConquerHP(segments, bounds, bounds.x + bounds.width / 2);
+    if (coords.length > 0) {
+        const midIdx = Math.floor(coords.length / 2);
+        VP = coords[midIdx];
+    } else {
+        // Fallback: Spatial Split
+        VP = bounds.x + bounds.width / 2;
     }
-
-    const midIdx = Math.floor(coords.length / 2);
-    const VP = coords[midIdx];
 
     // 1. Left
     const leftBounds = { ...bounds, width: VP - bounds.x };
@@ -96,26 +98,28 @@ function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
 }
 
 function divideAndConquerHP(segments: Segment[], bounds: Rectangle, VP: number): Rectangle {
+    if (bounds.height < 0.1) return { x: VP, y: bounds.y, width: 0, height: 0 };
+
     // Coordinate Splitting Y
     const coords = getInternalCoords(segments, bounds.y, bounds.y + bounds.height, false);
+    let HP = 0;
 
-    if (coords.length === 0) {
-        // No Y endpoints.
-        // Run solveCentral at arbitrary HP (midpoint) to catch crossing largest rect.
-        return solveCentral(segments, bounds, { x: VP, y: bounds.y + bounds.height / 2 });
+    if (coords.length > 0) {
+        const midIdx = Math.floor(coords.length / 2);
+        HP = coords[midIdx];
+    } else {
+        // Fallback: Spatial Split Y
+        HP = bounds.y + bounds.height / 2;
     }
-
-    const midIdx = Math.floor(coords.length / 2);
-    const HP = coords[midIdx];
 
     // 1. Top
     const topBounds = { ...bounds, y: HP, height: (bounds.y + bounds.height) - HP };
-    const topSegs = segments.filter(s => s.maxY > HP - 1e-9); // Segments in top
+    const topSegs = segments.filter(s => s.maxY > HP - 1e-9);
     const maxTop = (topBounds.height > 1e-6) ? divideAndConquerHP(topSegs, topBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 2. Bottom
     const bottomBounds = { ...bounds, height: HP - bounds.y };
-    const botSegs = segments.filter(s => s.minY < HP + 1e-9); // Segments in bot
+    const botSegs = segments.filter(s => s.minY < HP + 1e-9);
     const maxBottom = (bottomBounds.height > 1e-6) ? divideAndConquerHP(botSegs, bottomBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 3. Central
@@ -151,16 +155,120 @@ function buildStair(segments: Segment[], quadrant: number, center: Point, bounds
     const qYMax = Math.max(yMin, yMax);
     const qXMin = (quadrant === 1 || quadrant === 4) ? center.x : bounds.x;
     const qXMax = (quadrant === 1 || quadrant === 4) ? bounds.x + bounds.width : center.x;
+    const EPS = 1e-9;
 
     for (const s of segments) {
+        // Broad phase Y
         if (s.maxY < qYMin || s.minY > qYMax) continue;
+        // Broad phase X
         if (s.maxX < qXMin || s.minX > qXMax) continue;
 
-        builder.addConstraint(Math.max(s.minY, qYMin), Math.min(s.maxY, qYMax), s, isMinimizingX);
+        // Clip s to Y-range [qYMin, qYMax] AND X-range [qXMin, qXMax]
+        // 1. Current effective Y range
+        let effYMin = Math.max(s.minY, qYMin);
+        let effYMax = Math.min(s.maxY, qYMax);
+
+        if (effYMin > effYMax + EPS) continue;
+
+        // 2. Check X range within this Y interval.
+        // If segment is vertical, X is constant.
+        if (Math.abs(s.p1.x - s.p2.x) < EPS) {
+            const xVal = s.p1.x;
+            if (xVal < qXMin - EPS || xVal > qXMax + EPS) continue;
+        } else {
+            // Non-vertical, check intersections with qXMin, qXMax
+            const slope = s.slope;
+            const intercept = s.intercept;
+            // x = (y - c) / m ? No, x = my + c no. y = mx + c.
+            // Line eqs: x = (y - intercept) * (1/slope) ??
+            // Segment: x(y).
+            // We need y where x(y) = qXMin and x(y) = qXMax.
+            // Segment.getX(y) is implemented.
+            // We need inverse: getY(x).
+
+            // y = m'x + c' form from Point-Slope or similar.
+            // Let's use getLine to be safe or geometry.
+            // Actually, if we just check endpoints at effYMin, effYMax?
+            // Monotonic X/Y means min/max X occur at boundaries of Y-interval.
+            const xAtYMin = s.getX(effYMin);
+            const xAtYMax = s.getX(effYMax);
+
+            const minXSeg = Math.min(xAtYMin, xAtYMax);
+            const maxXSeg = Math.max(xAtYMin, xAtYMax);
+
+            // If completely outside X-range
+            if (maxXSeg < qXMin - EPS || minXSeg > qXMax + EPS) continue;
+
+            // Refine effYMin, effYMax if it crosses X-boundaries
+            // We want the subset of [effYMin, effYMax] where x(y) in [qXMin, qXMax].
+            // x(y) is linear.
+            // Solve x(y) = qXMin.
+            // Solve x(y) = qXMax.
+
+            // y(x) = slope * x + intercept ?? 
+            // Segment.slope is dy/dx.
+            // y = slope * x + intercept.
+            // y1 = slope * qXMin + intercept. 
+            // y2 = slope * qXMax + intercept.
+
+            const yAtXMin = s.getY(qXMin);
+            const yAtXMax = s.getY(qXMax);
+
+            // We intersect [effYMin, effYMax] with Y-range implied by X in [qXMin, qXMax].
+            // The segment part inside X-bounds has Y-range [min(yAtXMin, yAtXMax), max(...)].
+            // WAIT. Infinite line intersection. The segment might not reach X-bounds.
+            // We need intersection of "Segment Box" with "Quadrant Box".
+            // We already know segment overlaps quadrant box (Broad phase).
+            // We want interval of Y.
+
+            // If slope != 0 (not horizontal) and not infinite.
+            // y(x) is monotonic.
+            // Valid Y range is intersection of [s.minY, s.maxY] AND [y(qXMin), y(qXMax)] (bounded by box) AND [qYMin, qYMax].
+            // Actually, just clipping segment to box [qXMin, qXMax] x [qYMin, qYMax].
+            // The clipped segment has a Y-range.
+
+            // Intersection of Line and Box.
+            let yRangeMin = -Infinity;
+            let yRangeMax = Infinity;
+
+            // Clip by Y bounds
+            yRangeMin = Math.max(yRangeMin, qYMin, s.minY);
+            yRangeMax = Math.min(yRangeMax, qYMax, s.maxY);
+
+            // Clip by X bounds (Projected to Y via line eq)
+            // x(y) = (y - intercept_y) / slope_y ? No.
+            // s.getX(y) logic: (y - intercept) / slope  (where slope is dy/dx, intercept is y-intercept).
+            // x = (y - c)/m.
+            // We want qXMin <= (y-c)/m <= qXMax.
+            // If m > 0: m*qXMin + c <= y <= m*qXMax + c.
+            // If m < 0: m*qXMax + c <= y <= m*qXMin + c.
+
+            const m = s.slope;
+            const c = s.intercept;
+            if (Math.abs(m) > EPS) { // if m=0 (horizontal), X is undefined/range. handled separately?
+                // If horizontal, m=0. y is constant.
+                // Handled below?
+                const y1 = m * qXMin + c;
+                const y2 = m * qXMax + c;
+                const iyMin = Math.min(y1, y2);
+                const iyMax = Math.max(y1, y2);
+
+                yRangeMin = Math.max(yRangeMin, iyMin);
+                yRangeMax = Math.min(yRangeMax, iyMax);
+            }
+
+            effYMin = yRangeMin;
+            effYMax = yRangeMax;
+        }
+
+        if (effYMin < effYMax + EPS) {
+            builder.addConstraint(effYMin, effYMax, s, isMinimizingX);
+        }
     }
 
     return new Stair(builder.intervals);
 }
+
 
 function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, center: Point): Rectangle {
     let maxArea = 0;

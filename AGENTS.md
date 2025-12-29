@@ -35,9 +35,14 @@ The heart of the system.
 ## Development Workflow
 
 ### 1. Verification
-Always run the full test suite and debug scripts:
+**CRITICAL**: You MUST run the full test suite after EVERY change to ensure no regressions.
 ```bash
 npm test
+```
+This runs `tests/mer.test.ts`.
+
+Also run the arbitrary obstacle debug script:
+```bash
 npx tsx debug_arbitrary.ts
 ```
 
