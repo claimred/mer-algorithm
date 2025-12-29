@@ -350,9 +350,54 @@ function buildStair(segments: Segment[], quadrant: number, center: Point, window
 
             const m = s.slope;
             const c = s.intercept;
-            if (Math.abs(m) > EPS) { // if m=0 (horizontal), X is undefined/range. handled separately?
-                // If horizontal, m=0. y is constant.
-                // Handled below?
+
+            if (Math.abs(m) <= EPS) {
+                // Horizontal Segment Special Handling
+                // s.getX(y) returns max(x), which might be OUTSIDE the quadrant even if the segment spans into it.
+                // We need to treat it as a vertical barrier at the "Effective X" within the quadrant.
+
+                // Intersection of segment X-range [s.minX, s.maxX] and Quadrant X-range [qXMin, qXMax]
+                const segMinX = s.minX;
+                const segMaxX = s.maxX;
+
+                const overlapMin = Math.max(segMinX, qXMin);
+                const overlapMax = Math.min(segMaxX, qXMax);
+
+                if (overlapMin > overlapMax + EPS) continue; // No X-overlap
+
+                // Effective X:
+                // If minimizing (looking right from left), we hit the LEFTMOST point of the overlap.
+                // If maximizing (looking left from right), we hit the RIGHTMOST point of the overlap.
+                const effX = isMinimizingX ? overlapMin : overlapMax;
+
+                // Create a proxy VERTICAL segment at effX
+                // This ensures getX returns effX constantly.
+                const proxySeg = new Segment({ x: effX, y: s.minY }, { x: effX, y: s.maxY });
+
+                // Use the proxy for the constraint
+                // We also need to set the effective Y range to just the segment's Y (since it's horizontal)
+                effYMin = s.minY;
+                effYMax = s.maxY;
+
+                // We will add this constraint below. 
+                // We must override 's' with 'proxySeg' for the addConstraint call, 
+                // BUT addConstraint takes 's' as passed. 
+                // We can't easily swap 's' in the loop variable.
+                // So we call addConstraint here directly and continue?
+                // Or we update a 'segToUse' variable?
+                // Let's call builder directly and continue to be clean.
+
+                // Clip effY to quadrant Y
+                effYMin = Math.max(effYMin, qYMin);
+                effYMax = Math.min(effYMax, qYMax);
+
+                if (effYMin < effYMax + EPS) {
+                    builder.addConstraint(effYMin, effYMax, proxySeg, isMinimizingX);
+                }
+                continue; // Done with this segment
+
+            } else {
+                // Non-horizontal (Sloped)
                 const y1 = m * qXMin + c;
                 const y2 = m * qXMax + c;
                 const iyMin = Math.min(y1, y2);
@@ -360,10 +405,10 @@ function buildStair(segments: Segment[], quadrant: number, center: Point, window
 
                 yRangeMin = Math.max(yRangeMin, iyMin);
                 yRangeMax = Math.min(yRangeMax, iyMax);
-            }
 
-            effYMin = yRangeMin;
-            effYMax = yRangeMax;
+                effYMin = yRangeMin;
+                effYMax = yRangeMax;
+            }
         }
 
         if (effYMin < effYMax + EPS) {
