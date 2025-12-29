@@ -34,3 +34,9 @@ This project implements the $O(n \log^2 n)$ algorithm for finding the Maximum Em
     *   `matrix_search.ts`: Monotone matrix search utility
     *   `staircase.ts`: Data structures for staircase boundaries
 *   `tests/`: Vitest test suite
+
+## Documentation
+
+*   [Algorithm Specification](./specification.md): Detailed algorithm description and theoretical background.
+*   [Visualization Tool Specification](./visualization_spec.md): Plans for the upcoming web-based visualizer.
+
