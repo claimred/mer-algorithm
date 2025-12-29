@@ -1,5 +1,5 @@
 import { Rectangle, Segment, Point, rectArea } from './geometry';
-import { Staircase, CombinedStep } from './staircase';
+import { CombinedStep } from './staircase';
 import { Matrix, monotoneMax } from './matrix_search';
 
 enum JobType {
