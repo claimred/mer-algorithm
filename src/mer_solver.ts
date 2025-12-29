@@ -451,10 +451,12 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
                 if (yt <= yb) return 0;
 
                 const cY = center.y;
-                const minQ1 = s1.getMinX(cY, yt);
-                const minQ4 = s4.getMinX(yb, cY);
-                const maxQ2 = s2.getMaxX(cY, yt);
-                const maxQ3 = s3.getMaxX(yb, cY);
+                const EPS = 1e-5; // Shrink query to ignore boundary obstacles
+
+                const minQ1 = s1.getMinX(cY, yt - EPS);
+                const minQ4 = s4.getMinX(yb + EPS, cY);
+                const maxQ2 = s2.getMaxX(cY, yt - EPS);
+                const maxQ3 = s3.getMaxX(yb + EPS, cY);
 
                 if (isNaN(minQ1) || isNaN(minQ4) || isNaN(maxQ2) || isNaN(maxQ3)) return 0;
 
@@ -510,14 +512,16 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
             // Re-run optimization for this pair to capture bestRect
             // (Code duplication unideal but robust)
             const evalArea = (yt: number, yb: number) => {
-                // ... same ...
                 if (!top.s1 || !top.s2 || !bot.s1 || !bot.s2) return 0;
                 if (yt <= yb) return 0;
                 const cY = center.y;
-                const minQ1 = s1.getMinX(cY, yt);
-                const minQ4 = s4.getMinX(yb, cY);
-                const maxQ2 = s2.getMaxX(cY, yt);
-                const maxQ3 = s3.getMaxX(yb, cY);
+                const EPS = 1e-5; // Shrink query
+
+                const minQ1 = s1.getMinX(cY, yt - EPS);
+                const minQ4 = s4.getMinX(yb + EPS, cY);
+                const maxQ2 = s2.getMaxX(cY, yt - EPS);
+                const maxQ3 = s3.getMaxX(yb + EPS, cY);
+
                 if (isNaN(minQ1) || isNaN(minQ4) || isNaN(maxQ2) || isNaN(maxQ3)) return 0;
                 const xR = Math.min(minQ1, minQ4);
                 const xL = Math.max(maxQ2, maxQ3);
@@ -530,8 +534,9 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
                 if (area >= maxArea - 1e-9) { // strictness?
                     // Found it
                     const cY = center.y;
-                    const xR = Math.min(s1.getMinX(cY, yt), s4.getMinX(yb, cY));
-                    const xL = Math.max(s2.getMaxX(cY, yt), s3.getMaxX(yb, cY));
+                    const EPS = 1e-5;
+                    const xR = Math.min(s1.getMinX(cY, yt - EPS), s4.getMinX(yb + EPS, cY));
+                    const xL = Math.max(s2.getMaxX(cY, yt - EPS), s3.getMaxX(yb + EPS, cY));
                     bestRect = { x: xL, y: yb, width: xR - xL, height: yt - yb };
                     maxArea = area;
                 }
