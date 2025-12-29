@@ -51,4 +51,4 @@ Use `debug_arbitrary.ts` for specific geometric scenarios (Diagonal, Diamond, et
 
 ## Future Work
 -   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.
--   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.
+
