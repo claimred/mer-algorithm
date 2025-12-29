@@ -9,38 +9,33 @@ A web-based interactive tool to visualize, debug, and demonstrate the Maximum Em
 ## Features
 
 ### 1. Canvas Board
--   **Drawing Area**: A responsive HTML5 Canvas representing the logical coordinate system (default 100x100), mapped to the screen size while maintaining aspect ratio.
--   **Coordinate System**: 
-    -   Standard Cartesian Logic: `(0,0)` at bottom-left.
-    -   Visual Feedback: Display current mouse logical coordinates `(x, y)` in the UI.
--   **Obstacle Rendering**: 
-    -   Draw obstacles as black line segments with visible endpoints.
-    -   **Hover Effect**: Highlight segment and show coordinates when mouse enters detection radius.
+-   **Full Window Layout**: The canvas maximizes to fill the entire browser window (responsive).
+-   **Dynamic Scaling**: The renderer adjusts scale to fit the vertical dimension (0..100 logical units) while expanding horizontally to match the screen aspect ratio.
+-   **Coordinate System**: Standard Cartesian (0,0 at bottom-left).
+-   **Obstacle Rendering**: Black line segments with visible endpoints.
 
-### 2. Algorithm Visualization (New)
-The visualization must support inspecting the *internal state* of the `MerSolver`.
+### 2. Algorithm Visualization (Implemented)
+The tool visualizes the `MerSolver` execution using a Generator-based approach.
 
 -   **Step-by-Step Mode**:
-    -   Convert the recursive solver into a Generator or State Machine to yield intermediate states.
-    -   **Controls**: `Next Step`, `Play` (with speed control), `Pause`, `Reset`.
+    -   **Generator API**: The solver yields `SolverStep` objects (`SPLIT_VP`, `SPLIT_HP`, `SOLVE_CENTRAL`) interacting with the UI loop.
+    -   **Controls**: `Start Debug`, `Next`, `Play`, `Stop`.
 -   **Visual Elements**:
-    -   **Active Window**: Highlight the current rectangular region (sub-problem) being processed (e.g., dashed blue border).
-    -   **Split Line**: Draw the Vertical (`VP`) or Horizontal (`HP`) cut line chosen for the current step (e.g., dashed red line).
-    -   **Staircases**: When solving the "Central" interactions, visualize the 4 directional staircases (`Q1`..`Q4`) as shaded polygons or stepped lines.
-    -   **Candidate Rectangles**: Briefly flash candidate rectangles as they are evaluated.
+    -   **Active Window**: Dashed blue rectangle showing the current sub-problem bounds.
+    -   **Split Line**: Dashed red line showing the Vertical or Horizontal cut.
+    -   **Result**: Semi-transparent green rectangle for the MER found so far.
 
 ### 3. Controls & Interactivity
 -   **Input Methods**:
-    -   **Drag-to-Draw**: Left-click and drag to create line segments.
-    -   **Precision Input**: Manual entry form for specific `(x1, y1) -> (x2, y2)` coordinates.
+    -   **Drag-to-Draw**: Left-click and drag to create segments.
 -   **Presets**:
-    -   `U-Shape`: Loads the failure case for heuristic splitters.
-    -   `Cross`: Tests central interaction.
-    -   `Grid`, `Staircase`, `Random`: Standard stress tests.
+    -   `U-Shape`: Standard heuristic failure case.
+    -   `Cross`: Central interaction test.
+    -   `Random`: Random set of segments.
 -   **Actions**:
-    -   `Solve`: Instant execution (Black Box mode).
-    -   `Debug Run`: Step-by-step execution (White Box mode).
-    -   `Clear`: Reset board.
+    -   `Solve`: Runs the algorithm instantly.
+    -   `Clear`: Resets the board.
+    -   `Debug`: Enters step-by-step mode.
 
 ### 4. Metrics & Feedback
 -   **Performance**: Execution time in milliseconds (performance.now).
@@ -74,22 +69,18 @@ The visualization must support inspecting the *internal state* of the `MerSolver
 -   **Shared Logic**: Import core algorithm directly from `../src/`.
 -   **Async Refactor**: To support step-by-step, the `MerSolver` might need a `yield` generic or a callback hook. Alternatively, pass a `DebugListener` interface to the solver that can record snapshots of the process.
 
-## Implementation Roadmap
+## Implementation Status
 
-### Phase 1: Core (Completed)
--   [x] Basic Vite setup.
--   [x] Canvas `Renderer` with Coordinate mapping.
--   [x] Basic `State` management.
+### Completed Features
+-   [x] Basic Vite setup & Canvas Renderer.
+-   [x] Full Window / Responsive Layout.
 -   [x] Drag-to-draw interaction.
--   [x] Synchronous `Solve` integration.
+-   [x] Generator-based Step-by-Step Debugging.
+-   [x] Presets (U-Shape, Cross, Random).
+-   [x] Synchronous Solve.
 
-### Phase 2: Enhanced Logic & UI (Current)
--   [ ] Implement specific Presets (U-Shape is partially done, verify correctness).
--   [ ] Add Manual Coordinate Input for precise testing.
--   [ ] Add "Hover" inspection for existing segments.
-
-### Phase 3: Advanced Visualization (Next)
--   [ ] Refactor `MerSolver` (or create `DebugSolver`) to support execution hooks/listeners.
--   [ ] Implement "Snapshot" recording during solve.
--   [ ] Build "Playback" UI (Slider/Buttons) to scrub through solver history.
--   [ ] Render "Split Lines" and "Active Windows" based on snapshots.
+### Future Improvements
+-   [ ] **Staircase Visualization**: Visualize the internal "Stair" data structures during the central solve step.
+-   [ ] **Manual Coordinate Input**: Form for precise segment entry.
+-   [ ] **Hover Inspection**: Inspect segment coordinates on hover.
+-   [ ] **Playback Slider**: Scrub through history.
