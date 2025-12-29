@@ -12,8 +12,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "gh-pages": "^6.3.0",
+    "ts-node": "^10.9.0",
     "typescript": "^5.0.0",
-    "vitest": "^0.30.0",
-    "ts-node": "^10.9.0"
+    "vitest": "^0.30.0"
   }
 }
