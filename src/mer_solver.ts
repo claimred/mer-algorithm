@@ -65,13 +65,17 @@ function getInternalCoords(segments: Segment[], minVal: number, maxVal: number, 
     return unique.filter(c => c > minVal + 1e-9 && c < maxVal - 1e-9);
 }
 
-function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
-    if (segments.length < 1) return bounds;
+/**
+ * Divide and Conquer (Vertical Partitioning)
+ * Terminology: "window" W refers to the current rectangular region being solved.
+ */
+function divideAndConquerVP(segments: Segment[], window: Rectangle): Rectangle {
+    if (segments.length < 1) return window;
     // Termination for spatial recursion (avoid infinite depth on spanning segments)
-    if (bounds.width < 0.1) return { ...bounds, width: 0, height: 0 };
+    if (window.width < 0.1) return { ...window, width: 0, height: 0 };
 
     // Coordinate Splitting
-    const coords = getInternalCoords(segments, bounds.x, bounds.x + bounds.width, true);
+    const coords = getInternalCoords(segments, window.x, window.x + window.width, true);
     let VP = 0;
 
     if (coords.length > 0) {
@@ -79,30 +83,33 @@ function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
         VP = coords[midIdx];
     } else {
         // Fallback: Spatial Split
-        VP = bounds.x + bounds.width / 2;
+        VP = window.x + window.width / 2;
     }
 
     // 1. Left
-    const leftBounds = { ...bounds, width: VP - bounds.x };
+    const leftWindow = { ...window, width: VP - window.x };
     const leftSegs = segments.filter(s => s.minX < VP + 1e-9);
-    const maxLeft = (leftBounds.width > 1e-6) ? divideAndConquerVP(leftSegs, leftBounds) : { x: 0, y: 0, width: 0, height: 0 };
+    const maxLeft = (leftWindow.width > 1e-6) ? divideAndConquerVP(leftSegs, leftWindow) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 2. Right
-    const rightBounds = { ...bounds, x: VP, width: (bounds.x + bounds.width) - VP };
+    const rightWindow = { ...window, x: VP, width: (window.x + window.width) - VP };
     const rightSegs = segments.filter(s => s.maxX > VP - 1e-9);
-    const maxRight = (rightBounds.width > 1e-6) ? divideAndConquerVP(rightSegs, rightBounds) : { x: 0, y: 0, width: 0, height: 0 };
+    const maxRight = (rightWindow.width > 1e-6) ? divideAndConquerVP(rightSegs, rightWindow) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 3. Crossing
-    const maxCrossing = divideAndConquerHP(segments, bounds, VP);
+    const maxCrossing = divideAndConquerHP(segments, window, VP);
 
     return getBest([maxLeft, maxRight, maxCrossing]);
 }
 
-function divideAndConquerHP(segments: Segment[], bounds: Rectangle, VP: number): Rectangle {
-    if (bounds.height < 0.1) return { x: VP, y: bounds.y, width: 0, height: 0 };
+/**
+ * Divide and Conquer (Horizontal Partitioning)
+ */
+function divideAndConquerHP(segments: Segment[], window: Rectangle, VP: number): Rectangle {
+    if (window.height < 0.1) return { x: VP, y: window.y, width: 0, height: 0 };
 
     // Coordinate Splitting Y
-    const coords = getInternalCoords(segments, bounds.y, bounds.y + bounds.height, false);
+    const coords = getInternalCoords(segments, window.y, window.y + window.height, false);
     let HP = 0;
 
     if (coords.length > 0) {
@@ -110,52 +117,54 @@ function divideAndConquerHP(segments: Segment[], bounds: Rectangle, VP: number):
         HP = coords[midIdx];
     } else {
         // Fallback: Spatial Split Y
-        HP = bounds.y + bounds.height / 2;
+        HP = window.y + window.height / 2;
     }
 
     // 1. Top
-    const topBounds = { ...bounds, y: HP, height: (bounds.y + bounds.height) - HP };
+    const topWindow = { ...window, y: HP, height: (window.y + window.height) - HP };
     const topSegs = segments.filter(s => s.maxY > HP - 1e-9);
-    const maxTop = (topBounds.height > 1e-6) ? divideAndConquerHP(topSegs, topBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
+    const maxTop = (topWindow.height > 1e-6) ? divideAndConquerHP(topSegs, topWindow, VP) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 2. Bottom
-    const bottomBounds = { ...bounds, height: HP - bounds.y };
+    const bottomWindow = { ...window, height: HP - window.y };
     const botSegs = segments.filter(s => s.minY < HP + 1e-9);
-    const maxBottom = (bottomBounds.height > 1e-6) ? divideAndConquerHP(botSegs, bottomBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
+    const maxBottom = (bottomWindow.height > 1e-6) ? divideAndConquerHP(botSegs, bottomWindow, VP) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 3. Central
-    const maxCentral = solveCentral(segments, bounds, { x: VP, y: HP });
+    const maxCentral = solveCentral(segments, window, { x: VP, y: HP });
 
     return getBest([maxTop, maxBottom, maxCentral]);
 }
 
-function solveCentral(segments: Segment[], bounds: Rectangle, center: Point): Rectangle {
+
+function solveCentral(segments: Segment[], window: Rectangle, center: Point): Rectangle {
     // Build 4 Maximal Empty Stairs
-    const Q1 = buildStair(segments, 1, center, bounds);
-    const Q2 = buildStair(segments, 2, center, bounds);
-    const Q3 = buildStair(segments, 3, center, bounds);
-    const Q4 = buildStair(segments, 4, center, bounds);
+    const Q1 = buildStair(segments, 1, center, window);
+    const Q2 = buildStair(segments, 2, center, window);
+    const Q3 = buildStair(segments, 3, center, window);
+    const Q4 = buildStair(segments, 4, center, window);
 
     return solveStairInteractions(Q1, Q2, Q3, Q4, center);
 }
 
-function buildStair(segments: Segment[], quadrant: number, center: Point, bounds: Rectangle): Stair {
+function buildStair(segments: Segment[], quadrant: number, center: Point, window: Rectangle): Stair {
     const isMinimizingX = (quadrant === 1 || quadrant === 4);
     const isUpperY = (quadrant === 1 || quadrant === 2);
 
-    const yMin = isUpperY ? center.y : bounds.y;
-    const yMax = isUpperY ? bounds.y + bounds.height : center.y;
+    const yMin = isUpperY ? center.y : window.y;
+    const yMax = isUpperY ? window.y + window.height : center.y;
 
     const xInit = isMinimizingX
-        ? (bounds.x + bounds.width)
-        : bounds.x;
+        ? (window.x + window.width)
+        : window.x;
 
     const builder = new StairBuilder(Math.min(yMin, yMax), Math.max(yMin, yMax), xInit);
 
     const qYMin = Math.min(yMin, yMax);
     const qYMax = Math.max(yMin, yMax);
-    const qXMin = (quadrant === 1 || quadrant === 4) ? center.x : bounds.x;
-    const qXMax = (quadrant === 1 || quadrant === 4) ? bounds.x + bounds.width : center.x;
+    const qXMin = (quadrant === 1 || quadrant === 4) ? center.x : window.x;
+    const qXMax = (quadrant === 1 || quadrant === 4) ? window.x + window.width : center.x;
+
     const EPS = 1e-9;
 
     for (const s of segments) {
