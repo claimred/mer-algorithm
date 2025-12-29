@@ -30,9 +30,115 @@ export function solve(obstacles: Rectangle[], floor: Rectangle): Rectangle {
     return solveSegments(segments, floor);
 }
 
-export function solveSegments(segments: Segment[], floor: Rectangle): Rectangle {
-    return divideAndConquerVP(segments, floor);
+interface Job {
+    window: Rectangle;
+    segments: Segment[];
+    type: 'VP' | 'HP';
+    splitX?: number; // Only for HP jobs (inherited from VP split)
 }
+
+export function solveSegments(segments: Segment[], floor: Rectangle): Rectangle {
+    let bestRect = { x: 0, y: 0, width: 0, height: 0 };
+    let maxArea = 0;
+
+    const stack: Job[] = [];
+    stack.push({
+        window: floor,
+        segments: segments,
+        type: 'VP'
+    });
+
+    while (stack.length > 0) {
+        const job = stack.pop()!;
+        const { window, segments: currSegs, type, splitX } = job;
+
+        // Base Case 0: No obstacles
+        if (currSegs.length === 0) {
+            const area = rectArea(window);
+            if (area > maxArea) {
+                maxArea = area;
+                bestRect = window;
+            }
+            continue;
+        }
+
+        if (type === 'VP') {
+            // Termination for spatial recursion (avoid infinite depth on spanning segments)
+            if (window.width < 0.1) continue;
+
+            // Coordinate Splitting
+            const coords = getInternalCoords(currSegs, window.x, window.x + window.width, true);
+            let VP = 0;
+
+            if (coords.length > 0) {
+                const midIdx = Math.floor(coords.length / 2);
+                VP = coords[midIdx];
+            } else {
+                // Fallback: Spatial Split
+                VP = window.x + window.width / 2;
+            }
+
+            // 1. Left
+            const leftWindow = { ...window, width: VP - window.x };
+            if (leftWindow.width > 1e-6) {
+                const leftSegs = currSegs.filter(s => s.minX < VP + 1e-9);
+                stack.push({ window: leftWindow, segments: leftSegs, type: 'VP' });
+            }
+
+            // 2. Right
+            const rightWindow = { ...window, x: VP, width: (window.x + window.width) - VP };
+            if (rightWindow.width > 1e-6) {
+                const rightSegs = currSegs.filter(s => s.maxX > VP - 1e-9);
+                stack.push({ window: rightWindow, segments: rightSegs, type: 'VP' });
+            }
+
+            // 3. Crossing (HP Job)
+            stack.push({ window: window, segments: currSegs, type: 'HP', splitX: VP });
+        } else {
+            // HP Job
+            if (window.height < 0.1) continue;
+
+            // Coordinate Splitting Y
+            const coords = getInternalCoords(currSegs, window.y, window.y + window.height, false);
+            let HP = 0;
+
+            if (coords.length > 0) {
+                const midIdx = Math.floor(coords.length / 2);
+                HP = coords[midIdx];
+            } else {
+                // Fallback: Spatial Split Y
+                HP = window.y + window.height / 2;
+            }
+
+            const VP = splitX!; // Must exist for HP job spawned by VP
+
+            // 1. Top
+            const topWindow = { ...window, y: HP, height: (window.y + window.height) - HP };
+            if (topWindow.height > 1e-6) {
+                const topSegs = currSegs.filter(s => s.maxY > HP - 1e-9);
+                stack.push({ window: topWindow, segments: topSegs, type: 'HP', splitX: VP });
+            }
+
+            // 2. Bottom
+            const bottomWindow = { ...window, height: HP - window.y };
+            if (bottomWindow.height > 1e-6) {
+                const botSegs = currSegs.filter(s => s.minY < HP + 1e-9);
+                stack.push({ window: bottomWindow, segments: botSegs, type: 'HP', splitX: VP });
+            }
+
+            // 3. Central (Solve directly)
+            const centralRect = solveCentral(currSegs, window, { x: VP, y: HP });
+            const area = rectArea(centralRect);
+            if (area > maxArea) {
+                maxArea = area;
+                bestRect = centralRect;
+            }
+        }
+    }
+
+    return bestRect;
+}
+
 
 // Helper to get unique sorted coordinates inside bounds
 function getInternalCoords(segments: Segment[], minVal: number, maxVal: number, isX: boolean): number[] {
@@ -64,78 +170,6 @@ function getInternalCoords(segments: Segment[], minVal: number, maxVal: number, 
 
     return unique.filter(c => c > minVal + 1e-9 && c < maxVal - 1e-9);
 }
-
-/**
- * Divide and Conquer (Vertical Partitioning)
- * Terminology: "window" W refers to the current rectangular region being solved.
- */
-function divideAndConquerVP(segments: Segment[], window: Rectangle): Rectangle {
-    if (segments.length < 1) return window;
-    // Termination for spatial recursion (avoid infinite depth on spanning segments)
-    if (window.width < 0.1) return { ...window, width: 0, height: 0 };
-
-    // Coordinate Splitting
-    const coords = getInternalCoords(segments, window.x, window.x + window.width, true);
-    let VP = 0;
-
-    if (coords.length > 0) {
-        const midIdx = Math.floor(coords.length / 2);
-        VP = coords[midIdx];
-    } else {
-        // Fallback: Spatial Split
-        VP = window.x + window.width / 2;
-    }
-
-    // 1. Left
-    const leftWindow = { ...window, width: VP - window.x };
-    const leftSegs = segments.filter(s => s.minX < VP + 1e-9);
-    const maxLeft = (leftWindow.width > 1e-6) ? divideAndConquerVP(leftSegs, leftWindow) : { x: 0, y: 0, width: 0, height: 0 };
-
-    // 2. Right
-    const rightWindow = { ...window, x: VP, width: (window.x + window.width) - VP };
-    const rightSegs = segments.filter(s => s.maxX > VP - 1e-9);
-    const maxRight = (rightWindow.width > 1e-6) ? divideAndConquerVP(rightSegs, rightWindow) : { x: 0, y: 0, width: 0, height: 0 };
-
-    // 3. Crossing
-    const maxCrossing = divideAndConquerHP(segments, window, VP);
-
-    return getBest([maxLeft, maxRight, maxCrossing]);
-}
-
-/**
- * Divide and Conquer (Horizontal Partitioning)
- */
-function divideAndConquerHP(segments: Segment[], window: Rectangle, VP: number): Rectangle {
-    if (window.height < 0.1) return { x: VP, y: window.y, width: 0, height: 0 };
-
-    // Coordinate Splitting Y
-    const coords = getInternalCoords(segments, window.y, window.y + window.height, false);
-    let HP = 0;
-
-    if (coords.length > 0) {
-        const midIdx = Math.floor(coords.length / 2);
-        HP = coords[midIdx];
-    } else {
-        // Fallback: Spatial Split Y
-        HP = window.y + window.height / 2;
-    }
-
-    // 1. Top
-    const topWindow = { ...window, y: HP, height: (window.y + window.height) - HP };
-    const topSegs = segments.filter(s => s.maxY > HP - 1e-9);
-    const maxTop = (topWindow.height > 1e-6) ? divideAndConquerHP(topSegs, topWindow, VP) : { x: 0, y: 0, width: 0, height: 0 };
-
-    // 2. Bottom
-    const bottomWindow = { ...window, height: HP - window.y };
-    const botSegs = segments.filter(s => s.minY < HP + 1e-9);
-    const maxBottom = (bottomWindow.height > 1e-6) ? divideAndConquerHP(botSegs, bottomWindow, VP) : { x: 0, y: 0, width: 0, height: 0 };
-
-    // 3. Central
-    const maxCentral = solveCentral(segments, window, { x: VP, y: HP });
-
-    return getBest([maxTop, maxBottom, maxCentral]);
-}
-
 
 function solveCentral(segments: Segment[], window: Rectangle, center: Point): Rectangle {
     // Build 4 Maximal Empty Stairs
