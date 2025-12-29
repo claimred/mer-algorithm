@@ -19,10 +19,11 @@ export class Renderer {
     resize(w: number, h: number) {
         this.width = w;
         this.height = h;
-        // Keep aspect ratio square centered
-        const size = Math.min(w, h) - 2 * this.margin;
-        this.scaleX = size / this.logicalSize;
-        this.scaleY = size / this.logicalSize;
+
+        // Fit height to 100 logical units, width adapts
+        const availableH = h - 2 * this.margin;
+        this.scaleY = availableH / this.logicalSize;
+        this.scaleX = this.scaleY; // Keep square tokens (1:1 aspect ratio for shapes)
     }
 
     clear() {
@@ -30,15 +31,35 @@ export class Renderer {
     }
 
     toScreen(x: number, y: number): Point {
-        // Center the 100x100 logical box
+        // Center the content
+        // Width of logical area is determined by container width? 
+        // No, we want to expand the logical area horizontally if screen is wide?
+        // OR do we just want to zoom in?
+        // User said "Make visualization bigger".
+        // If we fix ScaleY based on Height, ScaleX = ScaleY.
+        // Then visible logical width = (Width - 2*Margin) / ScaleX.
+
+        // Let's implement full flexible centering
+        // Logical origin (0,0) is bottom-left of the visible area?
+        // Or do we keep (0,0) at bottom-left of the 100x100 box, but allow drawing outside?
+        // Current code assumes 0..100 logic.
+        // If we want "bigger", maybe we just want to FILL the screen.
+
+        // Let's shift so (0,0) is bottom-left + margin.
+        // const originX = this.width / 2 - (50 * this.scaleX); // Keep 0..100 centered?
+        // Actually, let's keep the standard 0..100 centered to avoid breaking everything.
+        // But scaling is now based on Height only (so it fills height).
+
+
         const contentW = this.logicalSize * this.scaleX;
         const contentH = this.logicalSize * this.scaleY;
+
         const offsetX = (this.width - contentW) / 2;
         const offsetY = (this.height - contentH) / 2;
 
         return {
             x: offsetX + x * this.scaleX,
-            y: offsetY + (this.logicalSize - y) * this.scaleY // Flip Y for standard Cartesian (0 at bottom)
+            y: offsetY + (this.logicalSize - y) * this.scaleY
         };
     }
 
