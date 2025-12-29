@@ -7,9 +7,11 @@ export class Renderer {
     private scaleX: number = 1;
     private scaleY: number = 1;
 
-    // Logic bounds (0..100)
-    private readonly logicalSize = 100;
+    // Logic bounds
+    public logicalWidth = 100;
+    public readonly logicalHeight = 100; // Height is fixed reference
     private readonly margin = 10;
+
 
     constructor(canvas: HTMLCanvasElement) {
         this.ctx = canvas.getContext('2d')!;
@@ -20,10 +22,14 @@ export class Renderer {
         this.width = w;
         this.height = h;
 
-        // Fit height to 100 logical units, width adapts
+        // Fit height to 100 logical units
         const availableH = h - 2 * this.margin;
-        this.scaleY = availableH / this.logicalSize;
-        this.scaleX = this.scaleY; // Keep square tokens (1:1 aspect ratio for shapes)
+        this.scaleY = availableH / this.logicalHeight;
+        this.scaleX = this.scaleY; // Keep square tokens
+
+        // Calculate reachable logical width
+        const availableW = w - 2 * this.margin;
+        this.logicalWidth = availableW / this.scaleX;
     }
 
     clear() {
@@ -31,46 +37,17 @@ export class Renderer {
     }
 
     toScreen(x: number, y: number): Point {
-        // Center the content
-        // Width of logical area is determined by container width? 
-        // No, we want to expand the logical area horizontally if screen is wide?
-        // OR do we just want to zoom in?
-        // User said "Make visualization bigger".
-        // If we fix ScaleY based on Height, ScaleX = ScaleY.
-        // Then visible logical width = (Width - 2*Margin) / ScaleX.
-
-        // Let's implement full flexible centering
-        // Logical origin (0,0) is bottom-left of the visible area?
-        // Or do we keep (0,0) at bottom-left of the 100x100 box, but allow drawing outside?
-        // Current code assumes 0..100 logic.
-        // If we want "bigger", maybe we just want to FILL the screen.
-
-        // Let's shift so (0,0) is bottom-left + margin.
-        // const originX = this.width / 2 - (50 * this.scaleX); // Keep 0..100 centered?
-        // Actually, let's keep the standard 0..100 centered to avoid breaking everything.
-        // But scaling is now based on Height only (so it fills height).
-
-
-        const contentW = this.logicalSize * this.scaleX;
-        const contentH = this.logicalSize * this.scaleY;
-
-        const offsetX = (this.width - contentW) / 2;
-        const offsetY = (this.height - contentH) / 2;
-
+        // Standard Cartesian with margin offset
+        // (0,0) is at bottom-left of the valid area
         return {
-            x: offsetX + x * this.scaleX,
-            y: offsetY + (this.logicalSize - y) * this.scaleY
+            x: this.margin + x * this.scaleX,
+            y: this.margin + (this.logicalHeight - y) * this.scaleY
         };
     }
 
     toLogical(sx: number, sy: number): Point {
-        const contentW = this.logicalSize * this.scaleX;
-        const contentH = this.logicalSize * this.scaleY;
-        const offsetX = (this.width - contentW) / 2;
-        const offsetY = (this.height - contentH) / 2;
-
-        const x = (sx - offsetX) / this.scaleX;
-        const y = this.logicalSize - ((sy - offsetY) / this.scaleY);
+        const x = (sx - this.margin) / this.scaleX;
+        const y = this.logicalHeight - ((sy - this.margin) / this.scaleY);
         return { x, y };
     }
 
@@ -79,27 +56,36 @@ export class Renderer {
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
 
-        // 10x10 grid
-        for (let i = 0; i <= 100; i += 10) {
+        // Grid lines every 10 units
+        // Vertical lines
+        for (let i = 0; i <= this.logicalWidth; i += 10) {
             const p1 = this.toScreen(i, 0);
-            const p2 = this.toScreen(i, 100);
+            const p2 = this.toScreen(i, this.logicalHeight);
             this.ctx.moveTo(p1.x, p1.y);
             this.ctx.lineTo(p2.x, p2.y);
+        }
 
-            const p3 = this.toScreen(0, i);
-            const p4 = this.toScreen(100, i);
-            this.ctx.moveTo(p3.x, p3.y);
-            this.ctx.lineTo(p4.x, p4.y);
+        // Horizontal lines
+        for (let i = 0; i <= this.logicalHeight; i += 10) {
+            const p1 = this.toScreen(0, i);
+            const p2 = this.toScreen(this.logicalWidth, i);
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
         }
         this.ctx.stroke();
 
         // Border
         this.ctx.strokeStyle = '#000';
+
+        // Let's use strokeRect on screen coords
+        const tl = this.toScreen(0, this.logicalHeight); // Top-Left
+        const br = this.toScreen(this.logicalWidth, 0);  // Bottom-Right
+
         this.ctx.strokeRect(
-            this.toScreen(0, 100).x,
-            this.toScreen(0, 100).y, // Top-Left in screen
-            this.logicalSize * this.scaleX,
-            this.logicalSize * this.scaleY
+            tl.x,
+            tl.y,
+            br.x - tl.x,
+            br.y - tl.y
         );
     }
 
@@ -145,12 +131,12 @@ export class Renderer {
         this.ctx.beginPath();
         if (isX) {
             const p1 = this.toScreen(val, 0); // Bottom
-            const p2 = this.toScreen(val, 100); // Top
+            const p2 = this.toScreen(val, this.logicalHeight); // Top
             this.ctx.moveTo(p1.x, p1.y);
             this.ctx.lineTo(p2.x, p2.y);
         } else {
             const p1 = this.toScreen(0, val);
-            const p2 = this.toScreen(100, val);
+            const p2 = this.toScreen(this.logicalWidth, val);
             this.ctx.moveTo(p1.x, p1.y);
             this.ctx.lineTo(p2.x, p2.y);
         }
