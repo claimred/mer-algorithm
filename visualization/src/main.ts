@@ -10,7 +10,6 @@ app.innerHTML = `
     <h2>MER Visualizer</h2>
     
     <div class="controls">
-    <div class="controls">
       <h3>Actions</h3>
       <button id="solveBtn">Solve</button>
       <button id="clearBtn" class="secondary">Clear</button>
@@ -59,13 +58,21 @@ let dragCurrent: Point = { x: 0, y: 0 };
 
 
 // Resize handling
+// Resize handling
 function resize() {
-    canvas.width = canvas.parentElement!.clientWidth;
-    canvas.height = canvas.parentElement!.clientHeight;
-    renderer.resize(canvas.width, canvas.height);
-    draw();
+    const parent = canvas.parentElement;
+    if (parent) {
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        renderer.resize(canvas.width, canvas.height);
+        draw();
+    }
 }
-window.addEventListener('resize', resize);
+
+const resizeObserver = new ResizeObserver(() => resize());
+resizeObserver.observe(canvas.parentElement!);
+
+// Initial resize
 resize();
 
 // Drawing Loop
