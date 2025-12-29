@@ -100,9 +100,9 @@ export class StairBuilder {
             const start = Math.max(interval.domainMin, yMin);
             const end = Math.min(interval.domainMax, yMax);
 
-            if (start < end - 1e-9) {
+            if (start <= end + 1e-9) {
                 // Parts before overlap
-                if (interval.domainMin < start) {
+                if (interval.domainMin < start - 1e-9) {
                     newIntervals.push({ ...interval, domainMax: start });
                 }
 
