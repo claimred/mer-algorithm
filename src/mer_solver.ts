@@ -14,7 +14,13 @@ export function solve(obstacles: Rectangle[], floor: Rectangle): Rectangle {
         segments.push(new Segment(p3, p4));
         segments.push(new Segment(p4, p1));
     }
-    // Add floor boundaries as obstacles (inward facing, so we don't go out)
+    // Add floor boundaries as obstacles (inward facing)
+    // Fix: Floor boundaries should NOT be added as specific segments to split on?
+    // They are boundaries. If we add them, they are just segments.
+    // Solver expects segments INSIDE bounds. 
+    // If we add floor segments, they align with bounds.
+    // It's fine to add them constraints.
+
     segments.push(new Segment({ x: floor.x, y: floor.y }, { x: floor.x + floor.width, y: floor.y }));
     segments.push(new Segment({ x: floor.x + floor.width, y: floor.y }, { x: floor.x + floor.width, y: floor.y + floor.height }));
     segments.push(new Segment({ x: floor.x + floor.width, y: floor.y + floor.height }, { x: floor.x, y: floor.y + floor.height }));
@@ -24,28 +30,64 @@ export function solve(obstacles: Rectangle[], floor: Rectangle): Rectangle {
 }
 
 export function solveSegments(segments: Segment[], floor: Rectangle): Rectangle {
-    // Start D&C
     return divideAndConquerVP(segments, floor);
 }
 
+// Helper to get unique sorted coordinates inside bounds
+function getInternalCoords(segments: Segment[], minVal: number, maxVal: number, isX: boolean): number[] {
+    const coords: number[] = [];
+    for (const s of segments) {
+        const v1 = isX ? s.p1.x : s.p1.y;
+        const v2 = isX ? s.p2.x : s.p2.y;
+        // Strict inequality to avoid boundary issues? 
+        // We want endpoints INSIDE the slab.
+        if (v1 >= minVal - 1e-9 && v1 <= maxVal + 1e-9) coords.push(v1); // Include boundary? 
+        if (v2 >= minVal - 1e-9 && v2 <= maxVal + 1e-9) coords.push(v2);
+    }
+    coords.sort((a, b) => a - b);
+
+    // Unique
+    const unique: number[] = [];
+    if (coords.length > 0) {
+        unique.push(coords[0]);
+        for (let i = 1; i < coords.length; i++) {
+            if (coords[i] > coords[i - 1] + 1e-6) unique.push(coords[i]);
+        }
+    }
+
+    // Filter strictly inside? 
+    // Nandy: Split at median of sorted distinct coordinates.
+    // If all coords are on boundary, what happens?
+    // Then we have no "internal" split point.
+    // But we might have segments spanning.
+
+    return unique.filter(c => c > minVal + 1e-6 && c < maxVal - 1e-6);
+}
+
 function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
-    if (segments.length < 1 || bounds.width < 1e-6) return bounds;
+    if (segments.length < 1) return bounds; // Actually correct? If no segments, entire bounds is empty.
 
-    // Simplification: if no segments INSIDE, return bounds.
-    // Check if any segment intersects bounds? 
-    // For now assuming passed segments are relevant.
+    // Coordinate Splitting
+    const coords = getInternalCoords(segments, bounds.x, bounds.x + bounds.width, true);
 
-    const VP = bounds.x + bounds.width / 2;
+    if (coords.length === 0) {
+        // No vertical endpoints inside. Switch to Horizontal.
+        // This is a "Slab" where only horizontal spanning segments might exist.
+        return divideAndConquerHP(segments, bounds, bounds.x + bounds.width / 2);
+    }
+
+    const midIdx = Math.floor(coords.length / 2);
+    const VP = coords[midIdx];
 
     // 1. Left
     const leftBounds = { ...bounds, width: VP - bounds.x };
-    const leftSegs = segments.filter(s => s.minX < VP);
-    const maxLeft = (leftBounds.width > 0) ? divideAndConquerVP(leftSegs, leftBounds) : { x: 0, y: 0, width: 0, height: 0 };
+    const leftSegs = segments.filter(s => s.minX < VP + 1e-9);
+    const maxLeft = (leftBounds.width > 1e-6) ? divideAndConquerVP(leftSegs, leftBounds) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 2. Right
     const rightBounds = { ...bounds, x: VP, width: (bounds.x + bounds.width) - VP };
-    const rightSegs = segments.filter(s => s.maxX > VP);
-    const maxRight = (rightBounds.width > 0) ? divideAndConquerVP(rightSegs, rightBounds) : { x: 0, y: 0, width: 0, height: 0 };
+    const rightSegs = segments.filter(s => s.maxX > VP - 1e-9);
+    const maxRight = (rightBounds.width > 1e-6) ? divideAndConquerVP(rightSegs, rightBounds) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 3. Crossing
     const maxCrossing = divideAndConquerHP(segments, bounds, VP);
@@ -54,17 +96,27 @@ function divideAndConquerVP(segments: Segment[], bounds: Rectangle): Rectangle {
 }
 
 function divideAndConquerHP(segments: Segment[], bounds: Rectangle, VP: number): Rectangle {
-    if (bounds.height < 1e-6) return { x: VP, y: bounds.y, width: 0, height: 0 };
+    // Coordinate Splitting Y
+    const coords = getInternalCoords(segments, bounds.y, bounds.y + bounds.height, false);
 
-    const HP = bounds.y + bounds.height / 2;
+    if (coords.length === 0) {
+        // No Y endpoints.
+        // Run solveCentral at arbitrary HP (midpoint) to catch crossing largest rect.
+        return solveCentral(segments, bounds, { x: VP, y: bounds.y + bounds.height / 2 });
+    }
+
+    const midIdx = Math.floor(coords.length / 2);
+    const HP = coords[midIdx];
 
     // 1. Top
     const topBounds = { ...bounds, y: HP, height: (bounds.y + bounds.height) - HP };
-    const maxTop = (topBounds.height > 0) ? divideAndConquerHP(segments.filter(s => s.maxY > HP), topBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
+    const topSegs = segments.filter(s => s.maxY > HP - 1e-9); // Segments in top
+    const maxTop = (topBounds.height > 1e-6) ? divideAndConquerHP(topSegs, topBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 2. Bottom
     const bottomBounds = { ...bounds, height: HP - bounds.y };
-    const maxBottom = (bottomBounds.height > 0) ? divideAndConquerHP(segments.filter(s => s.minY < HP), bottomBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
+    const botSegs = segments.filter(s => s.minY < HP + 1e-9); // Segments in bot
+    const maxBottom = (bottomBounds.height > 1e-6) ? divideAndConquerHP(botSegs, bottomBounds, VP) : { x: 0, y: 0, width: 0, height: 0 };
 
     // 3. Central
     const maxCentral = solveCentral(segments, bounds, { x: VP, y: HP });
@@ -83,12 +135,6 @@ function solveCentral(segments: Segment[], bounds: Rectangle, center: Point): Re
 }
 
 function buildStair(segments: Segment[], quadrant: number, center: Point, bounds: Rectangle): Stair {
-    // Quadrants:
-    // 1: TR (y > cy, x > cx). minimize x.
-    // 2: TL (y > cy, x < cx). maximize x.
-    // 3: BL (y < cy, x < cx). maximize x.
-    // 4: BR (y < cy, x > cx). minimize x.
-
     const isMinimizingX = (quadrant === 1 || quadrant === 4);
     const isUpperY = (quadrant === 1 || quadrant === 2);
 
@@ -127,6 +173,7 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
         for (const bot of botRanges) {
             const evalArea = (yt: number, yb: number) => {
                 if (!top.s1 || !top.s2 || !bot.s1 || !bot.s2) return 0;
+                if (yt <= yb) return 0;
 
                 const cY = center.y;
                 const minQ1 = s1.getMinX(cY, yt);
