@@ -1,9 +1,9 @@
-import { MerSolver } from '@src/mer_solver';
+import { MerSolver, SolverStep } from '@src/mer_solver';
 import { Segment, Rectangle } from '@src/geometry';
 
 export class State {
     public obstacles: Segment[] = [];
-    public bounds: Rectangle = { x_min: 0, y_min: 0, x_max: 100, y_max: 100 };
+    public bounds: Rectangle = { x: 0, y: 0, width: 100, height: 100 };
     public result: Rectangle | null = null;
     public solver: MerSolver;
 
@@ -26,29 +26,55 @@ export class State {
         this.result = null;
     }
 
+    public solverStep: SolverStep | null = null;
+    public iterator: Generator<SolverStep, Rectangle, void> | null = null;
+    public isDebugging = false;
+
     solve() {
         const t0 = performance.now();
-        this.result = this.solver.solve(this.bounds, this.obstacles);
+        this.result = this.solver.solveSegments(this.obstacles, this.bounds);
         const t1 = performance.now();
+        this.isDebugging = false;
+        this.solverStep = null;
         return {
             time: t1 - t0,
-            area: this.result ? (this.result.x_max - this.result.x_min) * (this.result.y_max - this.result.y_min) : 0
+            area: this.result ? (this.result.width) * (this.result.height) : 0
         };
+    }
+
+    startDebug() {
+        this.iterator = this.solver.solveSegmentsGenerator(this.obstacles, this.bounds);
+        this.isDebugging = true;
+        this.result = null;
+        this.nextStep();
+    }
+
+    nextStep() {
+        if (!this.iterator) return;
+        const res = this.iterator.next();
+        if (res.done) {
+            this.result = res.value as Rectangle;
+            this.iterator = null;
+            this.isDebugging = false;
+            this.solverStep = { type: 'FINISHED' };
+        } else {
+            this.solverStep = res.value;
+        }
     }
 
     // Presets
     loadUShape() {
         this.setObstacles([
-            { p1: { x: 20, y: 20 }, p2: { x: 20, y: 80 } },
-            { p1: { x: 20, y: 20 }, p2: { x: 80, y: 20 } },
-            { p1: { x: 80, y: 20 }, p2: { x: 80, y: 80 } }
+            new Segment({ x: 20, y: 20 }, { x: 20, y: 80 }),
+            new Segment({ x: 20, y: 20 }, { x: 80, y: 20 }),
+            new Segment({ x: 80, y: 20 }, { x: 80, y: 80 })
         ]);
     }
 
     loadCross() {
         this.setObstacles([
-            { p1: { x: 50, y: 20 }, p2: { x: 50, y: 80 } },
-            { p1: { x: 20, y: 50 }, p2: { x: 80, y: 50 } }
+            new Segment({ x: 50, y: 20 }, { x: 50, y: 80 }),
+            new Segment({ x: 20, y: 50 }, { x: 80, y: 50 })
         ]);
     }
 
@@ -61,9 +87,9 @@ export class State {
             const horizontal = Math.random() > 0.5;
 
             if (horizontal) {
-                obs.push({ p1: { x, y }, p2: { x: x + len, y } });
+                obs.push(new Segment({ x, y }, { x: x + len, y }));
             } else {
-                obs.push({ p1: { x, y }, p2: { x, y: y + len } });
+                obs.push(new Segment({ x, y }, { x, y: y + len }));
             }
         }
         this.setObstacles(obs);

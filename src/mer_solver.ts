@@ -2,33 +2,191 @@ import { Rectangle, Segment, Point, rectArea } from './geometry';
 import { Stair, StairBuilder, StairSegment } from './staircase';
 import { Matrix, monotoneMax } from './matrix_search';
 
-export function solve(obstacles: Rectangle[], floor: Rectangle): Rectangle {
-    const segments: Segment[] = [];
-    // Convert rectangles to 4 segments
-    for (const r of obstacles) {
-        const p1 = { x: r.x, y: r.y };
-        const p2 = { x: r.x + r.width, y: r.y };
-        const p3 = { x: r.x + r.width, y: r.y + r.height };
-        const p4 = { x: r.x, y: r.y + r.height };
-        segments.push(new Segment(p1, p2));
-        segments.push(new Segment(p2, p3));
-        segments.push(new Segment(p3, p4));
-        segments.push(new Segment(p4, p1));
-    }
-    // Add floor boundaries as obstacles (inward facing)
-    // Fix: Floor boundaries should NOT be added as specific segments to split on?
-    // They are boundaries. If we add them, they are just segments.
-    // Solver expects segments INSIDE bounds. 
-    // If we add floor segments, they align with bounds.
-    // It's fine to add them constraints.
+export type SolverStepType = 'START' | 'SPLIT_VP' | 'SPLIT_HP' | 'SOLVE_CENTRAL' | 'FINISHED';
 
-    segments.push(new Segment({ x: floor.x, y: floor.y }, { x: floor.x + floor.width, y: floor.y }));
-    segments.push(new Segment({ x: floor.x + floor.width, y: floor.y }, { x: floor.x + floor.width, y: floor.y + floor.height }));
-    segments.push(new Segment({ x: floor.x + floor.width, y: floor.y + floor.height }, { x: floor.x, y: floor.y + floor.height }));
-    segments.push(new Segment({ x: floor.x, y: floor.y + floor.height }, { x: floor.x, y: floor.y }));
-
-    return solveSegments(segments, floor);
+export interface SolverStep {
+    type: SolverStepType;
+    window?: Rectangle;
+    splitVal?: number; // X or Y coordinate
+    // details for central solve?
 }
+
+export class MerSolver {
+    public steps: SolverStep[] = [];
+
+    // Generator version for Step-by-Step visualization
+    *solveGenerator(obstacles: Rectangle[], floor: Rectangle): Generator<SolverStep, Rectangle, void> {
+        const segments: Segment[] = [];
+        for (const r of obstacles) {
+            const p1 = { x: r.x, y: r.y };
+            const p2 = { x: r.x + r.width, y: r.y };
+            const p3 = { x: r.x + r.width, y: r.y + r.height };
+            const p4 = { x: r.x, y: r.y + r.height };
+            segments.push(new Segment(p1, p2));
+            segments.push(new Segment(p2, p3));
+            segments.push(new Segment(p3, p4));
+            segments.push(new Segment(p4, p1));
+        }
+        // Floor bounds
+        segments.push(new Segment({ x: floor.x, y: floor.y }, { x: floor.x + floor.width, y: floor.y }));
+        segments.push(new Segment({ x: floor.x + floor.width, y: floor.y }, { x: floor.x + floor.width, y: floor.y + floor.height }));
+        segments.push(new Segment({ x: floor.x + floor.width, y: floor.y + floor.height }, { x: floor.x, y: floor.y + floor.height }));
+        segments.push(new Segment({ x: floor.x, y: floor.y + floor.height }, { x: floor.x, y: floor.y }));
+
+        yield* this.solveSegmentsGenerator(segments, floor);
+
+        // We can't easily return the result from yield* in a way that matches the final return? 
+        // Actually yield* returns the return value of the generator.
+        // But we need to capture the global best.
+        // Let's rely on internal state or just return the best at the end.
+        return this.bestRect;
+    }
+
+    private bestRect: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
+    private maxArea = 0;
+
+    // Internal recursive-emulation generator
+    *solveSegmentsGenerator(segments: Segment[], floor: Rectangle): Generator<SolverStep, Rectangle, void> {
+        this.bestRect = { x: 0, y: 0, width: 0, height: 0 };
+        this.maxArea = 0;
+
+        const stack: Job[] = [];
+        stack.push({
+            window: floor,
+            segments: segments,
+            type: 'VP'
+        });
+
+        yield { type: 'START', window: floor };
+
+        while (stack.length > 0) {
+            const job = stack.pop()!;
+            const { window, segments: currSegs, type, splitX } = job;
+
+            // Base Case 0: No obstacles
+            if (currSegs.length === 0) {
+                const area = rectArea(window);
+                if (area > this.maxArea) {
+                    this.maxArea = area;
+                    this.bestRect = window;
+                }
+                continue;
+            }
+
+            if (type === 'VP') {
+                if (window.width < 0.1) continue;
+
+                // Coordinate Splitting
+                const coords = getInternalCoords(currSegs, window.x, window.x + window.width, true);
+                let VP = 0;
+
+                if (coords.length > 0) {
+                    const midIdx = Math.floor(coords.length / 2);
+                    VP = coords[midIdx];
+                } else {
+                    VP = window.x + window.width / 2;
+                }
+
+                yield { type: 'SPLIT_VP', window, splitVal: VP };
+
+                // 1. Left
+                const leftWindow = { ...window, width: VP - window.x };
+                if (leftWindow.width > 1e-6) {
+                    const leftSegs = currSegs.filter(s => s.minX < VP + 1e-9);
+                    stack.push({ window: leftWindow, segments: leftSegs, type: 'VP' });
+                }
+
+                // 2. Right
+                const rightWindow = { ...window, x: VP, width: (window.x + window.width) - VP };
+                if (rightWindow.width > 1e-6) {
+                    const rightSegs = currSegs.filter(s => s.maxX > VP - 1e-9);
+                    stack.push({ window: rightWindow, segments: rightSegs, type: 'VP' });
+                }
+
+                // 3. Crossing (HP Job)
+                stack.push({ window: window, segments: currSegs, type: 'HP', splitX: VP });
+            } else {
+                // HP Job
+                if (window.height < 0.1) continue;
+
+                const coords = getInternalCoords(currSegs, window.y, window.y + window.height, false);
+                let HP = 0;
+
+                if (coords.length > 0) {
+                    const midIdx = Math.floor(coords.length / 2);
+                    HP = coords[midIdx];
+                } else {
+                    HP = window.y + window.height / 2;
+                }
+
+                const VP = splitX!;
+
+                yield { type: 'SPLIT_HP', window, splitVal: HP };
+
+                // 1. Top
+                const topWindow = { ...window, y: HP, height: (window.y + window.height) - HP };
+                if (topWindow.height > 1e-6) {
+                    const topSegs = currSegs.filter(s => s.maxY > HP - 1e-9);
+                    stack.push({ window: topWindow, segments: topSegs, type: 'HP', splitX: VP });
+                }
+
+                // 2. Bottom
+                const bottomWindow = { ...window, height: HP - window.y };
+                if (bottomWindow.height > 1e-6) {
+                    const botSegs = currSegs.filter(s => s.minY < HP + 1e-9);
+                    stack.push({ window: bottomWindow, segments: botSegs, type: 'HP', splitX: VP });
+                }
+
+                // 3. Central (Solve directly)
+                yield { type: 'SOLVE_CENTRAL', window };
+
+                const centralRect = solveCentral(currSegs, window, { x: VP, y: HP });
+                const area = rectArea(centralRect);
+                if (area > this.maxArea) {
+                    this.maxArea = area;
+                    this.bestRect = centralRect;
+                }
+            }
+        }
+
+        yield { type: 'FINISHED' };
+        return this.bestRect;
+    }
+    solveSegments(segments: Segment[], floor: Rectangle): Rectangle {
+        const iter = this.solveSegmentsGenerator(segments, floor);
+        let res = iter.next();
+        while (!res.done) {
+            res = iter.next();
+        }
+        return this.bestRect;
+    }
+}
+
+export function solve(obstacles: Rectangle[], floor: Rectangle): Rectangle {
+    // Backward compatibility wrapper
+    const solver = new MerSolver();
+    const iterator = solver.solveGenerator(obstacles, floor);
+    let result = iterator.next();
+    while (!result.done) {
+        result = iterator.next();
+    }
+    // The generator returns the best rect
+    return result.value as Rectangle;
+}
+
+export function solveSegments(segments: Segment[], floor: Rectangle): Rectangle {
+    const solver = new MerSolver();
+    return solver.solveSegments(segments, floor);
+}
+
+
+// Keep internal helpers but remove standalone solveSegments if not needed or make it use the class
+// Actually, standalone solveSegments was exported. We should either keep it or update tests.
+// Let's keep a compatibility dummy if needed, but 'solve' is the main entry point (line 5).
+// 'solveSegments' is exported at line 40. I will remove the EXPORT of separate solveSegments 
+// or implement it via the class to avoid code duplication.
+//
+// The replace block below replaces lines 5-140 (approx).
 
 interface Job {
     window: Rectangle;
@@ -37,107 +195,9 @@ interface Job {
     splitX?: number; // Only for HP jobs (inherited from VP split)
 }
 
-export function solveSegments(segments: Segment[], floor: Rectangle): Rectangle {
-    let bestRect = { x: 0, y: 0, width: 0, height: 0 };
-    let maxArea = 0;
+// Internal function to compute central interaction (kept as is)
+// ...
 
-    const stack: Job[] = [];
-    stack.push({
-        window: floor,
-        segments: segments,
-        type: 'VP'
-    });
-
-    while (stack.length > 0) {
-        const job = stack.pop()!;
-        const { window, segments: currSegs, type, splitX } = job;
-
-        // Base Case 0: No obstacles
-        if (currSegs.length === 0) {
-            const area = rectArea(window);
-            if (area > maxArea) {
-                maxArea = area;
-                bestRect = window;
-            }
-            continue;
-        }
-
-        if (type === 'VP') {
-            // Termination for spatial recursion (avoid infinite depth on spanning segments)
-            if (window.width < 0.1) continue;
-
-            // Coordinate Splitting
-            const coords = getInternalCoords(currSegs, window.x, window.x + window.width, true);
-            let VP = 0;
-
-            if (coords.length > 0) {
-                const midIdx = Math.floor(coords.length / 2);
-                VP = coords[midIdx];
-            } else {
-                // Fallback: Spatial Split
-                VP = window.x + window.width / 2;
-            }
-
-            // 1. Left
-            const leftWindow = { ...window, width: VP - window.x };
-            if (leftWindow.width > 1e-6) {
-                const leftSegs = currSegs.filter(s => s.minX < VP + 1e-9);
-                stack.push({ window: leftWindow, segments: leftSegs, type: 'VP' });
-            }
-
-            // 2. Right
-            const rightWindow = { ...window, x: VP, width: (window.x + window.width) - VP };
-            if (rightWindow.width > 1e-6) {
-                const rightSegs = currSegs.filter(s => s.maxX > VP - 1e-9);
-                stack.push({ window: rightWindow, segments: rightSegs, type: 'VP' });
-            }
-
-            // 3. Crossing (HP Job)
-            stack.push({ window: window, segments: currSegs, type: 'HP', splitX: VP });
-        } else {
-            // HP Job
-            if (window.height < 0.1) continue;
-
-            // Coordinate Splitting Y
-            const coords = getInternalCoords(currSegs, window.y, window.y + window.height, false);
-            let HP = 0;
-
-            if (coords.length > 0) {
-                const midIdx = Math.floor(coords.length / 2);
-                HP = coords[midIdx];
-            } else {
-                // Fallback: Spatial Split Y
-                HP = window.y + window.height / 2;
-            }
-
-            const VP = splitX!; // Must exist for HP job spawned by VP
-
-            // 1. Top
-            const topWindow = { ...window, y: HP, height: (window.y + window.height) - HP };
-            if (topWindow.height > 1e-6) {
-                const topSegs = currSegs.filter(s => s.maxY > HP - 1e-9);
-                stack.push({ window: topWindow, segments: topSegs, type: 'HP', splitX: VP });
-            }
-
-            // 2. Bottom
-            const bottomWindow = { ...window, height: HP - window.y };
-            if (bottomWindow.height > 1e-6) {
-                const botSegs = currSegs.filter(s => s.minY < HP + 1e-9);
-                stack.push({ window: bottomWindow, segments: botSegs, type: 'HP', splitX: VP });
-            }
-
-            // 3. Central (Solve directly)
-            const centralRect = solveCentral(currSegs, window, { x: VP, y: HP });
-            const area = rectArea(centralRect);
-            if (area > maxArea) {
-                maxArea = area;
-                bestRect = centralRect;
-            }
-        }
-    }
-
-    return bestRect;
-}
 
 
 // Helper to get unique sorted coordinates inside bounds
@@ -221,8 +281,9 @@ function buildStair(segments: Segment[], quadrant: number, center: Point, window
             if (xVal < qXMin - EPS || xVal > qXMax + EPS) continue;
         } else {
             // Non-vertical, check intersections with qXMin, qXMax
-            const slope = s.slope;
-            const intercept = s.intercept;
+            // const slope = s.slope;
+            // const intercept = s.intercept;
+
             // x = (y - c) / m ? No, x = my + c no. y = mx + c.
             // Line eqs: x = (y - intercept) * (1/slope) ??
             // Segment: x(y).
@@ -255,8 +316,8 @@ function buildStair(segments: Segment[], quadrant: number, center: Point, window
             // y1 = slope * qXMin + intercept. 
             // y2 = slope * qXMax + intercept.
 
-            const yAtXMin = s.getY(qXMin);
-            const yAtXMax = s.getY(qXMax);
+            // const yAtXMin = s.getY(qXMin);
+            // const yAtXMax = s.getY(qXMax);
 
             // We intersect [effYMin, effYMax] with Y-range implied by X in [qXMin, qXMax].
             // The segment part inside X-bounds has Y-range [min(yAtXMin, yAtXMax), max(...)].
@@ -470,15 +531,4 @@ function intersectRanges(list1: StairSegment[], list2: StairSegment[]) {
     return result;
 }
 
-function getBest(rects: Rectangle[]): Rectangle {
-    let best = rects[0];
-    let maxA = rectArea(best);
-    for (let i = 1; i < rects.length; i++) {
-        const area = rectArea(rects[i]);
-        if (area > maxA) {
-            maxA = area;
-            best = rects[i];
-        }
-    }
-    return best;
-}
+// function getBest(rects: Rectangle[]): Rectangle { ... } unused

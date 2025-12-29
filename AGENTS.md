@@ -7,7 +7,7 @@ This repository implements the **Maximum Empty Rectangle (MER)** algorithm for a
 -   **Language**: TypeScript
 -   **Runtime**: Node.js (via `tsx`)
 -   **Testing**: Vitest (`npm test`)
--   **Visualization**: (Planned) React/Vite in `visualization/`
+-   **Visualization**: Vanilla TypeScript/Vite in `visualization/` (Implemented)
 
 ## Key Invariants & Constraints
 1.  **Arbitrary Obstacles**: The algorithm supports any line segment.
@@ -19,9 +19,10 @@ This repository implements the **Maximum Empty Rectangle (MER)** algorithm for a
 ## Core Architecture
 ### `src/mer_solver.ts`
 The heart of the system.
--   **`solveSegments`**: Main iterative solver using an **Explicit Stack**.
+-   **`MerSolver` Class**: Encapsulates solver state.
+-   **`solveGenerator(...)`**: Generator-based implementation for **Step-by-Step Execution**. Yields `SolverStep` objects (SPLIT_VP, SPLIT_HP, etc.).
+-   **`solveSegments`**: Backward-compatible synchronous wrapper.
 -   **`solveCentral(...)`**: Solves the "Crossing MER" problem using Maximal Empty Stairs.
--   **`buildStair(...)`**: Constructs the "steps" (intervals) of available space.
 
 ### `src/staircase.ts`
 -   **`Stair`**: Represents the monotonic boundary of empty space in a quadrant. Supports `getMinX` / `getMaxX` queries.
@@ -50,4 +51,4 @@ Use `debug_arbitrary.ts` for specific geometric scenarios (Diagonal, Diamond, et
 
 ## Future Work
 -   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.
--   **Visualization**: Update UI to accept Segment inputs.
+-   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.

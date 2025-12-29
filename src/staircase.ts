@@ -1,4 +1,4 @@
-import { Point, Segment } from './geometry';
+import { Segment } from './geometry';
 
 export interface StairSegment {
     seg: Segment; // The constraint segment
