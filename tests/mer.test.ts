@@ -111,4 +111,17 @@ describe('MER Algorithm', () => {
             }
         }
     });
+
+
+    it('should handle Nearly Vertical segments robustly', () => {
+        // Nearly vertical segment at x=50
+        // (50, 0) -> (50.0000001, 100)
+        // Should split space roughly in half. 50x100 = 5000 approx.
+        const obs: Segment[] = [
+            new Segment({ x: 50, y: 0 }, { x: 50.0000001, y: 100 })
+        ];
+        const res = solveSegments(obs, bounds);
+        expect(rectArea(res)).toBeCloseTo(5000, 3);
+        // Ensure not 10000
+    });
 });
