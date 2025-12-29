@@ -18,7 +18,7 @@ The area of a candidate rectangle formed by two stairs (e.g., in Quadrant 1 and 
 ## 3. Algorithm Description ($O(n \log^2 n)$)
 
 ### 3.1 Divide-and-Conquer
-1.  **Divide**: Partition problem by a cut line (Vertical or Horizontal) chosen at the **Median Coordinate** of the obstacle endpoints.
+1.  **Divide**: Given a **Window $W$** (rectangular floor region), partition it by a cut line (Vertical or Horizontal) chosen at the **Median Coordinate** of the obstacle endpoints within $W$.
 2.  **Conquer**: Recursively solve Left and Right (or Top and Bottom) halves.
 3.  **Merge**: Solve the **Crossing MER** problem.
 
