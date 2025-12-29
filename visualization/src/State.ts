@@ -62,19 +62,23 @@ export class State {
         }
     }
 
-    // Presets
+    // Presets - use bounds-relative coordinates
     loadUShape() {
+        const w = this.bounds.width;
+        const h = this.bounds.height;
         this.setObstacles([
-            new Segment({ x: 20, y: 20 }, { x: 20, y: 80 }),
-            new Segment({ x: 20, y: 20 }, { x: 80, y: 20 }),
-            new Segment({ x: 80, y: 20 }, { x: 80, y: 80 })
+            new Segment({ x: w * 0.2, y: h * 0.2 }, { x: w * 0.2, y: h * 0.8 }),
+            new Segment({ x: w * 0.2, y: h * 0.2 }, { x: w * 0.8, y: h * 0.2 }),
+            new Segment({ x: w * 0.8, y: h * 0.2 }, { x: w * 0.8, y: h * 0.8 })
         ]);
     }
 
     loadCross() {
+        const w = this.bounds.width;
+        const h = this.bounds.height;
         this.setObstacles([
-            new Segment({ x: 50, y: 20 }, { x: 50, y: 80 }),
-            new Segment({ x: 20, y: 50 }, { x: 80, y: 50 })
+            new Segment({ x: w * 0.5, y: h * 0.2 }, { x: w * 0.5, y: h * 0.8 }),
+            new Segment({ x: w * 0.2, y: h * 0.5 }, { x: w * 0.8, y: h * 0.5 })
         ]);
     }
 
