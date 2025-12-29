@@ -5,6 +5,13 @@ This project implements the algorithm for finding the **Maximum Empty Isothetic 
 Based on the paper:
 *Location of the Largest Empty Rectangle among Arbitrary Obstacles* - S. C. Nandy, A. Sinha, B. B. Bhattacharya (1994).
 
+## Documentation
+
+*   [Algorithm Specification](./specification.md): Detailed algorithm description to Nandy 1994.
+*   [Visualization Specification](./visualization_spec.md): UI and Feature specs for the visualizer.
+*   [Developer & Agent Guide](./AGENTS.md): Internal implementation details.
+*   [Tasks & Roadmap](./TASKS.md): Project roadmap and TODOs.
+
 ## Features
 
 *   **Arbitrary Obstacles**: Supports any oriented line segments (diagonals, polygons).
@@ -51,8 +58,3 @@ Based on the paper:
     *   `staircase.ts`: "Stair" data structure for quadrant constraints
     *   `geometry.ts`: Geometric primitives (Segment, Point, maximizeQuadratic)
 *   `tests/`: Vitest test suite
-
-## Documentation
-
-*   [Algorithm Specification](./specification.md): Detailed algorithm description to Nandy 1994.
-*   [Developer & Agent Guide](./AGENTS.md): Internal implementation details.
