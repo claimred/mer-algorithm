@@ -1,5 +1,6 @@
 import { Rectangle, Segment, Point, rectArea } from './geometry';
 import { Stair, StairBuilder, StairSegment } from './staircase';
+import { Matrix, monotoneMax } from './matrix_search';
 
 export function solve(obstacles: Rectangle[], floor: Rectangle): Rectangle {
     const segments: Segment[] = [];
@@ -277,8 +278,25 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
     const topRanges = intersectRanges(s1.segments, s2.segments);
     const botRanges = intersectRanges(s3.segments, s4.segments);
 
-    for (const top of topRanges) {
-        for (const bot of botRanges) {
+
+
+    // Optimize using Monotone Matrix Search (SMAWK)
+    // Rows: Top intervals
+    // Cols: Bottom intervals
+    // Value: Max area for that pair
+
+    if (topRanges.length === 0 || botRanges.length === 0) return bestRect;
+
+    const matrix: Matrix = {
+        rows: () => topRanges.length,
+        cols: () => botRanges.length,
+        valueAt: (r: number, c: number) => {
+            const top = topRanges[r];
+            const bot = botRanges[c];
+
+            // Same heuristic/optimization logic as before to find max for this pair
+            let locMax = -1;
+
             const evalArea = (yt: number, yb: number) => {
                 if (!top.s1 || !top.s2 || !bot.s1 || !bot.s2) return 0;
                 if (yt <= yb) return 0;
@@ -301,13 +319,8 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
             // Grid search + corners
             const check = (yt: number, yb: number) => {
                 const area = evalArea(yt, yb);
-                if (area > maxArea) {
-                    maxArea = area;
-                    // Reconstruct
-                    const cY = center.y;
-                    const xR = Math.min(s1.getMinX(cY, yt), s4.getMinX(yb, cY));
-                    const xL = Math.max(s2.getMaxX(cY, yt), s3.getMaxX(yb, cY));
-                    bestRect = { x: xL, y: yb, width: xR - xL, height: yt - yb };
+                if (area > locMax) {
+                    locMax = area;
                 }
             };
 
@@ -322,11 +335,74 @@ function solveStairInteractions(s1: Stair, s2: Stair, s3: Stair, s4: Stair, cent
                     check(top.min + (top.max - top.min) * i / 4, bot.min + (bot.max - bot.min) * j / 4);
                 }
             }
+            return locMax;
+        }
+    };
+
+    // Get best column for each row in O(N)
+    const bestCols = monotoneMax(matrix);
+
+    // Iterate to find global max
+    for (let r = 0; r < topRanges.length; r++) {
+        const c = bestCols[r];
+        const val = matrix.valueAt(r, c);
+
+        if (val > maxArea) {
+            maxArea = val;
+            // Recover rect?
+            // We need to reconstruct the rect parameters for the best val.
+            // valueAt only returned area. 
+            // We can re-run check logic or modify valueAt to store state?
+            // Re-running check for the SINGLE best pair is cheap.
+
+            const top = topRanges[r];
+            const bot = botRanges[c];
+
+            // Re-run optimization for this pair to capture bestRect
+            // (Code duplication unideal but robust)
+            const evalArea = (yt: number, yb: number) => {
+                // ... same ...
+                if (!top.s1 || !top.s2 || !bot.s1 || !bot.s2) return 0;
+                if (yt <= yb) return 0;
+                const cY = center.y;
+                const minQ1 = s1.getMinX(cY, yt);
+                const minQ4 = s4.getMinX(yb, cY);
+                const maxQ2 = s2.getMaxX(cY, yt);
+                const maxQ3 = s3.getMaxX(yb, cY);
+                if (isNaN(minQ1) || isNaN(minQ4) || isNaN(maxQ2) || isNaN(maxQ3)) return 0;
+                const xR = Math.min(minQ1, minQ4);
+                const xL = Math.max(maxQ2, maxQ3);
+                if (xR <= xL) return 0;
+                return (xR - xL) * (yt - yb);
+            };
+
+            const check = (yt: number, yb: number) => {
+                const area = evalArea(yt, yb);
+                if (area >= maxArea - 1e-9) { // strictness?
+                    // Found it
+                    const cY = center.y;
+                    const xR = Math.min(s1.getMinX(cY, yt), s4.getMinX(yb, cY));
+                    const xL = Math.max(s2.getMaxX(cY, yt), s3.getMaxX(yb, cY));
+                    bestRect = { x: xL, y: yb, width: xR - xL, height: yt - yb };
+                    maxArea = area;
+                }
+            };
+
+            check(top.min, bot.min);
+            check(top.min, bot.max);
+            check(top.max, bot.min);
+            check(top.max, bot.max);
+            for (let i = 0; i <= 4; i++) {
+                for (let j = 0; j <= 4; j++) {
+                    check(top.min + (top.max - top.min) * i / 4, bot.min + (bot.max - bot.min) * j / 4);
+                }
+            }
         }
     }
 
     return bestRect;
 }
+
 
 function intersectRanges(list1: StairSegment[], list2: StairSegment[]) {
     const result = [];
