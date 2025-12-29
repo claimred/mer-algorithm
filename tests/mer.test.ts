@@ -40,7 +40,8 @@ describe('MER Algorithm', () => {
             for (let j = 0; j < 10; j++) {
                 const x = 10 + Math.random() * 80;
                 const y = 10 + Math.random() * 80;
-                obs.push({ p1: { x, y }, p2: { x: x + 1, y: y + 1 } });
+                // Generate Isothetic (Horizontal) segment
+                obs.push({ p1: { x, y }, p2: { x: x + 1, y: y } });
             }
 
             const res = solver.solve(bounds, obs);

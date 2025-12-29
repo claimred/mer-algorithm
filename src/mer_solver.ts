@@ -186,12 +186,26 @@ export class MerSolver {
             const noProgress = (totalSplitCount === 2 * jobObs.length) && (set1.length === jobObs.length) && (set2.length === jobObs.length);
 
             if (noProgress) {
-                if (!isVertical) {
-                    const rC = this.solveCentral(jobBounds, jobObs, { x: job.parentCutX, y: cutVal });
-                    const areaC = rectArea(rC);
-                    if (areaC > maxArea) { maxArea = areaC; bestRect = rC; }
+                // Hard barrier split logic (Fixes Collinear)
+                if (isVertical) {
+                    const b1 = { ...jobBounds };
+                    const b2 = { ...jobBounds };
+                    b1.x_max = cutVal;
+                    b2.x_min = cutVal;
+
+                    const mid1 = (b1.x_min + b1.x_max) / 2;
+                    const mid2 = (b2.x_min + b2.x_max) / 2;
+
+                    jobStack.push({ bounds: b1, obstacles: set1, type: JobType.VERTICAL_PARTITION, parentCutX: mid1 });
+                    jobStack.push({ bounds: b2, obstacles: set2, type: JobType.VERTICAL_PARTITION, parentCutX: mid2 });
                 } else {
-                    jobStack.push({ ...job, type: JobType.HORIZONTAL_PARTITION, parentCutX: cutVal });
+                    const b1 = { ...jobBounds };
+                    const b2 = { ...jobBounds };
+                    b1.y_max = cutVal;
+                    b2.y_min = cutVal;
+
+                    jobStack.push({ bounds: b1, obstacles: set1, type: JobType.HORIZONTAL_PARTITION, parentCutX: job.parentCutX });
+                    jobStack.push({ bounds: b2, obstacles: set2, type: JobType.HORIZONTAL_PARTITION, parentCutX: job.parentCutX });
                 }
                 continue;
             }
@@ -259,6 +273,43 @@ export class MerSolver {
         const events: Event[] = [];
         const EPS = 1e-9;
 
+        let curTop = bounds.y_max;
+        let curBot = bounds.y_min;
+
+        // 1. Initial Scan
+        for (const s of obstacles) {
+            const minX = Math.min(s.p1.x, s.p2.x);
+            const maxX = Math.max(s.p1.x, s.p2.x);
+            const minY = Math.min(s.p1.y, s.p2.y);
+            const maxY = Math.max(s.p1.y, s.p2.y);
+
+            let coversCenter = false;
+            // Strict inequality for 'covers' to ensure we capture segments that actually block the center line
+            // Use slightly loose check to include touching segments that might affect the interval
+            if (isRightSide) {
+                // For right side, segment must start at or before center and extend to right
+                if (minX <= center.x + EPS && maxX > center.x + EPS) coversCenter = true;
+            } else {
+                // For left side, segment must end at or after center and extend to left
+                if (maxX >= center.x - EPS && minX < center.x - EPS) coversCenter = true;
+            }
+
+            if (coversCenter) {
+                if ((minY < center.y - EPS && maxY > center.y + EPS) ||
+                    (Math.abs(minY - center.y) < EPS && Math.abs(maxY - center.y) < EPS)) {
+                    curTop = center.y;
+                    curBot = center.y;
+                }
+                else if (minY >= center.y - EPS) {
+                    curTop = Math.min(curTop, minY);
+                }
+                else if (maxY <= center.y + EPS) {
+                    curBot = Math.max(curBot, maxY);
+                }
+            }
+        }
+
+        // 2. Event Generation
         for (const s of obstacles) {
             const minX = Math.min(s.p1.x, s.p2.x);
             const maxX = Math.max(s.p1.x, s.p2.x);
@@ -269,57 +320,23 @@ export class MerSolver {
                 if (minX > center.x + EPS) continue;
             }
 
-            if (s.p1.y > center.y + EPS) events.push({ x: s.p1.x, y: s.p1.y, is_top: true });
-            if (s.p2.y > center.y + EPS) events.push({ x: s.p2.x, y: s.p2.y, is_top: true });
-            if (s.p1.y < center.y - EPS) events.push({ x: s.p1.x, y: s.p1.y, is_top: false });
-            if (s.p2.y < center.y - EPS) events.push({ x: s.p2.x, y: s.p2.y, is_top: false });
+            // p1
+            if (s.p1.y >= center.y - EPS) events.push({ x: s.p1.x, y: s.p1.y, is_top: true });
+            if (s.p1.y <= center.y + EPS) events.push({ x: s.p1.x, y: s.p1.y, is_top: false });
 
-            // Segments that strictly CROSS the center line
+            // p2
+            if (s.p2.y >= center.y - EPS) events.push({ x: s.p2.x, y: s.p2.y, is_top: true });
+            if (s.p2.y <= center.y + EPS) events.push({ x: s.p2.x, y: s.p2.y, is_top: false });
+
+            // Vertical Segment Crossing Center Y ??
             const minY = Math.min(s.p1.y, s.p2.y);
             const maxY = Math.max(s.p1.y, s.p2.y);
-            if (minY < center.y - EPS && maxY > center.y + EPS) {
-                if (isRightSide) {
-                    if (s.p1.x > center.x + EPS) {
-                        events.push({ x: s.p1.x, y: center.y, is_top: true });
-                        events.push({ x: s.p1.x, y: center.y, is_top: false });
-                    }
-                    if (s.p2.x > center.x + EPS) {
-                        events.push({ x: s.p2.x, y: center.y, is_top: true });
-                        events.push({ x: s.p2.x, y: center.y, is_top: false });
-                    }
-                } else {
-                    if (s.p1.x < center.x - EPS) {
-                        events.push({ x: s.p1.x, y: center.y, is_top: true });
-                        events.push({ x: s.p1.x, y: center.y, is_top: false });
-                    }
-                    if (s.p2.x < center.x - EPS) {
-                        events.push({ x: s.p2.x, y: center.y, is_top: true });
-                        events.push({ x: s.p2.x, y: center.y, is_top: false });
-                    }
-                }
-            }
-
-            // Handle segments exactly ON the center.y line (horizontal obstacles)
-            const isOnCenterLine = Math.abs(s.p1.y - center.y) < EPS && Math.abs(s.p2.y - center.y) < EPS;
-            if (isOnCenterLine) {
-                if (isRightSide) {
-                    if (s.p1.x > center.x + EPS) {
-                        events.push({ x: s.p1.x, y: center.y, is_top: true });
-                        events.push({ x: s.p1.x, y: center.y, is_top: false });
-                    }
-                    if (s.p2.x > center.x + EPS) {
-                        events.push({ x: s.p2.x, y: center.y, is_top: true });
-                        events.push({ x: s.p2.x, y: center.y, is_top: false });
-                    }
-                } else {
-                    if (s.p1.x < center.x - EPS) {
-                        events.push({ x: s.p1.x, y: center.y, is_top: true });
-                        events.push({ x: s.p1.x, y: center.y, is_top: false });
-                    }
-                    if (s.p2.x < center.x - EPS) {
-                        events.push({ x: s.p2.x, y: center.y, is_top: true });
-                        events.push({ x: s.p2.x, y: center.y, is_top: false });
-                    }
+            if (Math.abs(s.p1.x - s.p2.x) < EPS) { // Vertical
+                if (minY < center.y - EPS && maxY > center.y + EPS) {
+                    console.log(`Blocking Center Y at X=${s.p1.x}`);
+                    // Falls strictly across center line -> Blocks everything at this X
+                    events.push({ x: s.p1.x, y: center.y, is_top: true });
+                    events.push({ x: s.p1.x, y: center.y, is_top: false });
                 }
             }
         }
@@ -330,42 +347,46 @@ export class MerSolver {
         events.sort((a, b) => isRightSide ? a.x - b.x : b.x - a.x);
 
         const steps: CombinedStep[] = [];
-        let curTop = bounds.y_max;
-        let curBot = bounds.y_min;
-
         steps.push({ x: center.x, y_top: curTop, y_bot: curBot });
 
-        for (const ev of events) {
-            if (isRightSide) { if (ev.x < center.x - EPS) continue; }
-            else { if (ev.x > center.x + EPS) continue; }
+        let i = 0;
+        while (i < events.length) {
+            const ev = events[i];
 
-            let changed = false;
-            if (ev.is_top) {
-                if (ev.y < curTop) { curTop = ev.y; changed = true; }
-            } else {
-                if (ev.y > curBot) { curBot = ev.y; changed = true; }
-            }
+            // Skip events on wrong side (redundant if filtered above but safe)
+            if (isRightSide) { if (ev.x < center.x - EPS) { i++; continue; } }
+            else { if (ev.x > center.x + EPS) { i++; continue; } }
 
-            // Events at center.x update the initial step but don't create new ones
-            if (Math.abs(ev.x - center.x) < EPS) {
-                if (changed && steps.length > 0) {
+            const currentX = ev.x;
+
+            // Handle events strictly at center
+            if (Math.abs(currentX - center.x) < EPS) {
+                while (i < events.length && Math.abs(events[i].x - center.x) < EPS) {
+                    const e = events[i];
+                    if (e.is_top) curTop = Math.min(curTop, e.y);
+                    else curBot = Math.max(curBot, e.y);
+                    i++;
+                }
+                if (steps.length > 0) {
                     steps[0].y_top = Math.min(steps[0].y_top, curTop);
                     steps[0].y_bot = Math.max(steps[0].y_bot, curBot);
                 }
                 continue;
             }
 
-            if (changed) {
-                if (steps.length > 0 && Math.abs(steps[steps.length - 1].x - ev.x) < EPS) {
-                    steps[steps.length - 1].y_top = Math.min(steps[steps.length - 1].y_top, curTop);
-                    steps[steps.length - 1].y_bot = Math.max(steps[steps.length - 1].y_bot, curBot);
-                } else {
-                    steps.push({ x: ev.x, y_top: curTop, y_bot: curBot });
-                }
+            // Push step BEFORE update
+            steps.push({ x: currentX, y_top: curTop, y_bot: curBot });
+
+            // Apply updates
+            while (i < events.length && Math.abs(events[i].x - currentX) < EPS) {
+                const e = events[i];
+                if (e.is_top) curTop = Math.min(curTop, e.y);
+                else curBot = Math.max(curBot, e.y);
+                i++;
             }
         }
 
-        // Always add a termination step at the bounds edge
+        // Ensure we end at bounds
         const boundX = isRightSide ? bounds.x_max : bounds.x_min;
         if (steps.length === 0 || Math.abs(steps[steps.length - 1].x - boundX) > EPS) {
             steps.push({ x: boundX, y_top: curTop, y_bot: curBot });
