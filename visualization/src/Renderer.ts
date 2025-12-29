@@ -102,8 +102,13 @@ export class Renderer {
     }
 
     drawRect(r: Rectangle, color: string = 'rgba(0, 255, 0, 0.3)') {
-        const pMin = this.toScreen(r.x_min, r.y_max); // Top-Left of logic rect in screen coords
-        const pMax = this.toScreen(r.x_max, r.y_min); // Bottom-Right in screen coords
+        // Rectangle from core is { x, y, width, height } where (x,y) is bottom-left (Cartesian)
+        // Renderer toScreen expects (x, y) as Cartesian coordinates.
+        // Screen Y is flipped.
+
+        // Logical Bottom-Left
+        const pMin = this.toScreen(r.x, r.y + r.height); // Top-Left of screen (Logical Y max)
+        const pMax = this.toScreen(r.x + r.width, r.y); // Bottom-Right of screen (Logical Y min)
 
         this.ctx.fillStyle = color;
         this.ctx.fillRect(pMin.x, pMin.y, pMax.x - pMin.x, pMax.y - pMin.y);
@@ -111,5 +116,34 @@ export class Renderer {
         this.ctx.strokeStyle = 'green';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(pMin.x, pMin.y, pMax.x - pMin.x, pMax.y - pMin.y);
+    }
+    drawSplitLine(val: number, isX: boolean) {
+        this.ctx.strokeStyle = 'red';
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        if (isX) {
+            const p1 = this.toScreen(val, 0); // Bottom
+            const p2 = this.toScreen(val, 100); // Top
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+        } else {
+            const p1 = this.toScreen(0, val);
+            const p2 = this.toScreen(100, val);
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+        }
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+    }
+
+    drawActiveWindow(r: Rectangle) {
+        const pMin = this.toScreen(r.x, r.y + r.height);
+        const pMax = this.toScreen(r.x + r.width, r.y);
+        this.ctx.strokeStyle = 'blue';
+        this.ctx.lineWidth = 1;
+        this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(pMin.x, pMin.y, pMax.x - pMin.x, pMax.y - pMin.y);
+        this.ctx.setLineDash([]);
     }
 }

@@ -29,7 +29,22 @@ Based on the paper:
     npx tsx debug_arbitrary.ts
     ```
 
-## Project Structure
+## Visualization
+ 
+ A web-based visualizer is available to interactively test and debug the algorithm.
+ 
+ 1.  **Navigate to directory**:
+     ```bash
+     cd visualization
+     ```
+ 2.  **Run Development Server**:
+     ```bash
+     npm run dev
+     ```
+ 
+ See [visualization/README.md](./visualization/README.md) for more details.
+ 
+ ## Project Structure
 
 *   `src/`: Source code
     *   `mer_solver.ts`: Main D&C solver (Coordinate Splitting)

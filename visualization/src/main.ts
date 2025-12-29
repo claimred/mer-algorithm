@@ -1,7 +1,7 @@
 import './style.css';
 import { Renderer } from './Renderer';
 import { State } from './State';
-import { Point } from '@src/geometry';
+import { Point, Segment } from '@src/geometry';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -10,11 +10,23 @@ app.innerHTML = `
     <h2>MER Visualizer</h2>
     
     <div class="controls">
+    <div class="controls">
       <h3>Actions</h3>
       <button id="solveBtn">Solve</button>
       <button id="clearBtn" class="secondary">Clear</button>
       <button id="randomBtn" class="secondary">Randomize</button>
     </div>
+
+    <div class="controls">
+      <h3>Debug</h3>
+      <button id="debugBtn">Start Debug</button>
+      <div id="debugControls" style="display:none; gap: 5px; margin-top: 5px;">
+        <button id="nextBtn" style="flex:1;">Next</button>
+        <button id="playBtn" style="flex:1;">Play</button>
+        <button id="stopBtn" class="secondary" style="flex:1;">Stop</button>
+      </div>
+    </div>
+
 
     <div class="controls">
       <h3>Presets</h3>
@@ -65,9 +77,20 @@ function draw() {
         renderer.drawRect(state.result);
     }
 
+    // Debug info
+    if (state.isDebugging && state.solverStep) {
+        if (state.solverStep.window) {
+            renderer.drawActiveWindow(state.solverStep.window);
+        }
+        if (state.solverStep.splitVal !== undefined) {
+            const isX = (state.solverStep.type === 'SPLIT_VP');
+            renderer.drawSplitLine(state.solverStep.splitVal, isX);
+        }
+    }
+
     // Draw current drag line
     if (isDragging && dragStart) {
-        renderer.drawSegment({ p1: dragStart, p2: dragCurrent });
+        renderer.drawSegment(new Segment(dragStart, dragCurrent));
     }
 }
 
@@ -99,7 +122,7 @@ canvas.addEventListener('mousemove', (e) => {
 
 canvas.addEventListener('mouseup', () => {
     if (isDragging && dragStart) {
-        state.addObstacle({ p1: dragStart, p2: dragCurrent });
+        state.addObstacle(new Segment(dragStart, dragCurrent));
         isDragging = false;
         dragStart = null;
         draw();
@@ -108,8 +131,70 @@ canvas.addEventListener('mouseup', () => {
 });
 
 // Buttons
+// Debug Controls
+const debugControls = document.getElementById('debugControls')!;
+let playInterval: number | null = null;
+
+function stopPlayback() {
+    if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+    }
+}
+
+document.getElementById('debugBtn')!.addEventListener('click', () => {
+    stopPlayback();
+    state.startDebug();
+    debugControls.style.display = 'flex';
+    draw();
+    updateStats(`Debugging... Step: ${state.solverStep?.type}`);
+});
+
+document.getElementById('nextBtn')!.addEventListener('click', () => {
+    stopPlayback();
+    if (state.isDebugging) {
+        state.nextStep();
+        draw();
+
+        if (!state.isDebugging) {
+            debugControls.style.display = 'none';
+            updateStats(`Finished. Area: ${state.result?.width! * state.result?.height!}`);
+        } else {
+            updateStats(`Step: ${state.solverStep?.type}`);
+        }
+    }
+});
+
+document.getElementById('playBtn')!.addEventListener('click', () => {
+    if (playInterval) return;
+    playInterval = window.setInterval(() => {
+        if (state.isDebugging) {
+            state.nextStep();
+            draw();
+            updateStats(`Step: ${state.solverStep?.type}`);
+            if (!state.isDebugging) {
+                stopPlayback();
+                debugControls.style.display = 'none';
+            }
+        } else {
+            stopPlayback();
+        }
+    }, 100);
+});
+
+document.getElementById('stopBtn')!.addEventListener('click', () => {
+    stopPlayback();
+    state.isDebugging = false;
+    state.iterator = null;
+    debugControls.style.display = 'none';
+    draw();
+    updateStats('Debug stopped.');
+});
+
 document.getElementById('solveBtn')!.addEventListener('click', () => {
+    stopPlayback();
     const res = state.solve();
+    // ... existing solve logic
     draw();
     updateStats(`Area: ${res.area.toFixed(2)}<br>Time: ${res.time.toFixed(2)}ms`);
 });
