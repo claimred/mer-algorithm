@@ -9,10 +9,10 @@ A web-based interactive tool to visualize, debug, and demonstrate the Maximum Em
 ## Features
 
 ### 1. Canvas Board
--   **Full Window Layout**: The canvas maximizes to fill the entire browser window (responsive).
--   **Dynamic Scaling**: The renderer adjusts scale to fit the vertical dimension (0..100 logical units) while expanding horizontally to match the screen aspect ratio.
--   **Coordinate System**: Standard Cartesian (0,0 at bottom-left).
--   **Obstacle Rendering**: Black line segments with visible endpoints.
+-   **Full Window Layout**: The canvas maximizes to fill the entire browser window (responsive). Uses `ResizeObserver` for robust resize handling.
+-   **Dynamic Scaling**: The renderer fits the vertical dimension to 100 logical units while calculating `logicalWidth` dynamically based on aspect ratio. Grid lines extend across the full visible area.
+-   **Coordinate System**: Standard Cartesian (0,0 at bottom-left). `Renderer.toScreen()` and `toLogical()` handle coordinate transformations with configurable margin.
+-   **Obstacle Rendering**: Black line segments with visible endpoints (3px circles).
 
 ### 2. Algorithm Visualization (Implemented)
 The tool visualizes the `MerSolver` execution using a Generator-based approach.
@@ -57,17 +57,17 @@ The tool visualizes the `MerSolver` execution using a Generator-based approach.
 ```
 /visualization
   /src
-    /main.ts         # App entry, UI wiring
-    /Renderer.ts     # Canvas abstraction (Screen <-> Logic mapping)
-    /State.ts        # App state (obstacles, results, debug_steps)
-    /SolverRunner.ts # Wrapper to run MerSolver in sync or async/generator mode
-    /style.css       # Layout and UI styling
-  /index.html
+    main.ts         # App entry, UI wiring, event handlers
+    Renderer.ts     # Canvas abstraction (Screen <-> Logic mapping, grid, shapes)
+    State.ts        # App state (obstacles, results, debug iterator)
+    style.css       # Layout and UI styling
+  index.html        # Entry HTML (minimal, styles in style.css)
+  vite.config.ts    # Vite configuration with path aliases
 ```
 
 ### Integration Strategy
--   **Shared Logic**: Import core algorithm directly from `../src/`.
--   **Async Refactor**: To support step-by-step, the `MerSolver` might need a `yield` generic or a callback hook. Alternatively, pass a `DebugListener` interface to the solver that can record snapshots of the process.
+-   **Shared Logic**: Import core algorithm directly from `../src/` via `tsconfig` path aliases.
+-   **Generator API**: `MerSolver.solveSegmentsGenerator()` yields `SolverStep` objects for step-by-step visualization. The UI consumes these via an iterator stored in `State`.
 
 ## Implementation Status
 
