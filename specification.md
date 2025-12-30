@@ -1,6 +1,6 @@
 # Maximum Empty Rectangle (MER) Algorithm Specification
 
-**Reference**: Nandy, S. C., Sinha, A., & Bhattacharya, B. B. (1994). *Location of the Largest Empty Rectangle among Arbitrary Obstacles*.
+**Reference**: Nandy, S. C., Sinha, A., & Bhattacharya, B. B. (1994). *Location of the Largest Empty Rectangle among Arbitrary Obstacles*. [[DOI]](https://doi.org/10.1007/3-540-58715-2_122)
 
 ## 1. Problem Definition
 Given a rectangular floor $R$ and a set of $n$ **arbitrary** line segments (obstacles/sticks) $S = \{s_1, s_2, ..., s_n\}$ entirely within $R$, determine the isothetic (axis-aligned) rectangle $r \subseteq R$ of maximum area such that the interior of $r$ does not intersect any obstacle in $S$.

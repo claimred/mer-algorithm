@@ -1,5 +1,8 @@
 # Maximum Empty Rectangle (MER) in TypeScript
 
+> [!TIP]
+> **[Try the Online Demo](https://claimred.github.io/mer-algorithm/)**
+
 This project implements the algorithm for finding the **Maximum Empty Isothetic Rectangle** (MER) amidst a set of **Arbitrary Obstacles** (line segments) in a 2D plane.
 
 Based on the paper:
@@ -42,10 +45,12 @@ We follow a strict **Feature Branch Workflow**.
     npm test
     ```
 
-3.  **Run Arbitrary Obstacle Debug**:
+3.  **Run Recursive Debug**:
     ```bash
-    npx tsx debug_arbitrary.ts
+    npx tsx debug.ts
     ```
+
+    *Note: Most interactive debugging is now done via the visualizer.*
 
 ## Visualization
 

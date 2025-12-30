@@ -10,6 +10,9 @@ A web-based visualizer for the Maximum Empty Rectangle algorithm.
 - **Start/Stop Debugging**: Visualizes the Divide & Conquer process (Split Lines, Active Windows).
 - **Controls**: Play, Pause, Next Step.
 - **Responsive Layout**: Canvas automatically fills the window.
+- **Hybrid Theme**: Professional CAD-like interface (Dark UI, Light Canvas).
+- **Info & Links**: Easy access to source code and version info.
+- **CI/CD**: Auto-deployment to GitHub Pages.
 
 ## Setup
 
