@@ -80,6 +80,11 @@ The heart of the system.
 -   **Directory**: All debug scripts (e.g., `debug_*.ts`, `trace_*.ts`, `test_*.ts`) **MUST** be created in the `debug/` directory.
 -   **Git**: Do not commit experimental debug scripts to the repository root.
 
+### 3. Coding Standards
+-   **Small Functions**: Avoid large monolithic functions. Break logic into small, composable, and testable helpers (e.g., `handleHorizontalSegment`).
+-   **TSDoc**: All exported classes, interfaces, and public methods **MUST** have TSDoc comments explaining their purpose, parameters, and return values.
+-   **Dead Code**: Unused code (functions, variables) must be removed immediately. Do not comment out code.
+
 ## Future Work
 -   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.
 

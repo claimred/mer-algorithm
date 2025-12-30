@@ -60,10 +60,13 @@ We follow a strict **Feature Branch Workflow**.
  
  See [visualization/README.md](./visualization/README.md) for more details.
  
- ## Project Structure
+ 66:     *   `mer_solver.ts`: Main D&C solver (Coordinate Splitting)
+67:     *   `staircase.ts`: "Stair" data structure for quadrant constraints
+68:     *   `geometry.ts`: Geometric primitives (Segment, Point, Rectangle)
+69: *   `tests/`: Vitest test suite
 
-*   `src/`: Source code
-    *   `mer_solver.ts`: Main D&C solver (Coordinate Splitting)
-    *   `staircase.ts`: "Stair" data structure for quadrant constraints
-    *   `geometry.ts`: Geometric primitives (Segment, Point, maximizeQuadratic)
-*   `tests/`: Vitest test suite
+## Recent Updates (v1.0.1)
+- **Refactoring**: Core logic broken down into smaller, readable functions (`processVerticalSplit`, `handleSlopedSegment`).
+- **Fixes**: Resolved critical bugs with Cross-Shape and U-Shape obstacles.
+- **Cleanup**: Removed unused utility code.
+- **Documentation**: Extensive TSDoc added to public APIs.

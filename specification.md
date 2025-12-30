@@ -56,3 +56,9 @@ To find the MER crossing the dividing line (say, Vertical $VP$):
 ### 4.2 Solver Details
 *   **Explicit Stack**: Use coordinate splitting to avoid recursion depth issues.
 *   **Corner Handling**: Critically, the solver must handle "Flexible Supports" where the optimal rectangle corner touches an obstacle vertex or slides along a slanted line, not just "Fixed Supports" (grid alignment).
+
+### 4.3 Constraint Handling
+The solver uses unique strategies for different segment types to ensure robustness:
+*   **Arbitrary Sloped Segments**: Processed by clipping to the quadrant bounds.
+*   **Horizontal Segments**: Converted into **Proxy Vertical Constraints**. A horizontal segment effectively creates a "wall" at its nearest endpoint (relative to the quadrant origin). The solver synthesizes a vertical segment at this "Effective X" with the same Y-range, ensuring correct clipping without complex horizontal interval logic.
+*   **Vertical Segments**: Explicitly handled to avoid infinite slope calculations (`dx = 0`).
