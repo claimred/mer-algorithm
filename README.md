@@ -3,7 +3,7 @@
 This project implements the algorithm for finding the **Maximum Empty Isothetic Rectangle** (MER) amidst a set of **Arbitrary Obstacles** (line segments) in a 2D plane.
 
 Based on the paper:
-*Location of the Largest Empty Rectangle among Arbitrary Obstacles* - S. C. Nandy, A. Sinha, B. B. Bhattacharya (1994).
+*Location of the Largest Empty Rectangle among Arbitrary Obstacles* - S. C. Nandy, A. Sinha, B. B. Bhattacharya (1994). [[DOI]](https://doi.org/10.1007/3-540-58715-2_122)
 
 ## Documentation
 
