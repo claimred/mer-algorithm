@@ -129,4 +129,96 @@ describe('MER Algorithm', () => {
         expect(rectArea(res)).toBeCloseTo(5000, 3);
         // Ensure not 10000
     });
+    it('should find optimal area for U-Shape Opening Down', () => {
+        // U-Shape: Left, Top, Right walls opening Down
+        // Left: (30,30)->(30,70)
+        // Right: (70,30)->(70,70)
+        // Top: (30,70)->(70,70)
+        const obs: Segment[] = [
+            new Segment({ x: 30, y: 30 }, { x: 30, y: 70 }),
+            new Segment({ x: 70, y: 30 }, { x: 70, y: 70 }),
+            new Segment({ x: 30, y: 70 }, { x: 70, y: 70 })
+        ];
+        const res = solveSegments(obs, bounds);
+        expect(rectArea(res)).toBeGreaterThanOrEqual(2999);
+    });
+
+    it('should find optimal area for U-Shape Opening Left', () => {
+        // U-Shape: Top, Right, Bottom walls opening Left
+        // Top: (30,70)->(70,70)
+        // Bottom: (30,30)->(70,30)
+        // Right: (70,30)->(70,70)
+        const obs: Segment[] = [
+            new Segment({ x: 30, y: 70 }, { x: 70, y: 70 }),
+            new Segment({ x: 30, y: 30 }, { x: 70, y: 30 }),
+            new Segment({ x: 70, y: 30 }, { x: 70, y: 70 })
+        ];
+        const res = solveSegments(obs, bounds);
+        expect(rectArea(res)).toBeGreaterThanOrEqual(2999);
+    });
+
+    it('should find optimal area for U-Shape Opening Right', () => {
+        // U-Shape: Top, Left, Bottom walls opening Right
+        // Top: (30,70)->(70,70)
+        // Bottom: (30,30)->(70,30)
+        // Left: (30,30)->(30,70)
+        const obs: Segment[] = [
+            new Segment({ x: 30, y: 70 }, { x: 70, y: 70 }),
+            new Segment({ x: 30, y: 30 }, { x: 70, y: 30 }),
+            new Segment({ x: 30, y: 30 }, { x: 30, y: 70 })
+        ];
+        const res = solveSegments(obs, bounds);
+        expect(rectArea(res)).toBeGreaterThanOrEqual(2999);
+    });
+
+    it('should find optimal area for Offset Cross', () => {
+        // Unbalanced/Offset Cross
+        // H: (20, 40) - (90, 40)  (Long, shifted up)
+        // V: (30, 10) - (30, 90)  (Shifted left)
+        const obs: Segment[] = [
+            new Segment({ x: 20, y: 40 }, { x: 90, y: 40 }),
+            new Segment({ x: 30, y: 10 }, { x: 30, y: 90 })
+        ];
+        const res = solveSegments(obs, bounds);
+
+        // Expected regions:
+        // Right of x=30: (30,0) -> (100,100) BUT blocked by H at y=40
+        // - Top-Right: (30,40)-(100,100) -> 70x60 = 4200
+        // - Bot-Right: (30,0)-(100,40) -> 70x40 = 2800
+        // Left of x=30: (0,0)-(30,100) -> 30x100 = 3000
+
+        expect(rectArea(res)).toBeGreaterThanOrEqual(4199);
+
+        // Validation
+        for (const s of obs) {
+            expect(segmentIntersectsRectangle(s, res)).toBe(false);
+        }
+    });
+
+    it('should find optimal area for Comb Shape (E-Shape)', () => {
+        // Vertical spine at x=20
+        // 3 Horizontal prongs at y=20, y=50, y=80 extending to x=80
+        const obs: Segment[] = [
+            new Segment({ x: 20, y: 10 }, { x: 20, y: 90 }), // Spine
+            new Segment({ x: 20, y: 20 }, { x: 80, y: 20 }), // Prong 1
+            new Segment({ x: 20, y: 50 }, { x: 80, y: 50 }), // Prong 2
+            new Segment({ x: 20, y: 80 }, { x: 80, y: 80 })  // Prong 3
+        ];
+
+        const res = solveSegments(obs, bounds);
+
+        // Candidates:
+        // Left strip: 0-20 -> 20x100 = 2000
+        // Right strip: 80-100 -> 20x100 = 2000
+        // Top/Bot strips: 0-20/80-100 height -> 100x20 = 2000
+        // Internal pockets: 
+        // - Between y=20 and y=50, x from 20 to 100? No, open to right.
+        // - Rect (20, 20) -> (100, 50) ? Area 80x30 = 2400.
+        // - Rect (20, 50) -> (100, 80) ? Area 80x30 = 2400.
+
+        expect(rectArea(res)).toBeGreaterThanOrEqual(2399);
+        for (const s of obs) {
+            expect(segmentIntersectsRectangle(s, res)).toBe(false);
+        }
+    });
 });
