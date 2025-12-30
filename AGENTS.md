@@ -33,18 +33,38 @@ The heart of the system.
 -   **`maximizeQuadratic`**: Utility for determining Optimal 1-sided rectangle.
 
 ## Development Workflow
+**CRITICAL**: All changes must follow this exact process to maintain code quality and history.
 
-### 1. Verification
-**CRITICAL**: You MUST run the full test suite after EVERY change to ensure no regressions.
-```bash
-npm test
-```
-This runs `tests/mer.test.ts`.
+### 1. Workflow Protocol
+1.  **Issue Creation**:
+    -   Identify the task (bug or feature).
+    -   Create a GitHub Issue with a detailed description.
 
-Also run the arbitrary obstacle debug script:
-```bash
-npx tsx debug_arbitrary.ts
-```
+2.  **Branching**:
+    -   **NEVER commit to `main` directly.**
+    -   Create a feature/fix branch from `main`:
+        ```bash
+        git checkout -b feature/my-cool-feature
+        # or
+        git checkout -b fix/issue-description
+        ```
+
+3.  **Implementation & Comparison**:
+    -   Make your changes.
+    -   **Run Tests**: You must run ALL tests (Algo & Vis) before PR.
+        ```bash
+        npm test        # Logic tests
+        cd visualization && npm run build # Visualizer build check
+        ```
+
+4.  **Pull Request**:
+    -   Create a PR from your branch to `main`.
+    -   Link the relevant Issue.
+    -   Wait for approval.
+
+5.  **Merge**:
+    -   Rebase on `main` if needed to keep history semi-linear.
+    -   Merge only after all checks pass.
 
 ### 2. Debugging
 Use `debug_arbitrary.ts` for specific geometric scenarios (Diagonal, Diamond, etc.).
