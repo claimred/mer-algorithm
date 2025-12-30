@@ -3,40 +3,56 @@
 **Reference**: Nandy, S. C., Sinha, A., & Bhattacharya, B. B. (1994). *Location of the Largest Empty Rectangle among Arbitrary Obstacles*.
 
 ## 1. Problem Definition
-Given a rectangular floor $R$ and a set of $n$ **arbitrary** line segments (obstacles) $S = \{s_1, s_2, ..., s_n\}$ entirely within $R$, determine the isothetic (axis-aligned) rectangle $r \subseteq R$ of maximum area such that the interior of $r$ does not intersect any obstacle in $S$.
+Given a rectangular floor $R$ and a set of $n$ **arbitrary** line segments (obstacles/sticks) $S = \{s_1, s_2, ..., s_n\}$ entirely within $R$, determine the isothetic (axis-aligned) rectangle $r \subseteq R$ of maximum area such that the interior of $r$ does not intersect any obstacle in $S$.
 
 ## 2. Theoretical Foundations
 
-### 2.1 The "Staircase" (Stair)
+### 2.1 Key Definitions
+*   **Maximal Empty Rectangle (MER)**: An empty rectangle not properly contained in any other empty rectangle. It supports itself against obstacles on all four sides.
+*   **Support**: A stick touching the boundary of the MER.
+    *   **Fixed Support**: Contact is on the side of the rectangle (fixes the coordinate).
+    *   **Flexible Support**: Contact is at a corner of the rectangle (allows sliding).
+*   **Prime Maximal Empty Rectangle (PMER)**: An MER with at least one corner supported by a "flexible support" (endpoint of a stick or a generic point on a slanted stick). The global maximum is always a PMER.
+
+### 2.2 The "Staircase" (Stair)
 For a central point $c^*$, the free space in each quadrant is bounded by a **Maximal Empty Stair**.
 *   **Definition**: A monotonic chain of obstacle segments (lower/upper envelopes) defining the boundary of empty space associated with a specific quadrant relative to the center.
-*   **Property**: The union of the 4 stairs forms the search area for crossing rectangles.
+*   **Orthoconvex Polygon**: The union of the 4 stairs ($S^*_1, S^*_2, S^*_3, S^*_4$) forms an empty orthoconvex polygon containing $c^*$. The search for the MER enclosing $c^*$ is restricted to this polygon.
 
-### 2.2 Quadratic Maximization
-The area of a candidate rectangle formed by two stairs (e.g., in Quadrant 1 and Quadrant 3) can be expressed as a function of $y_{top}$ and $y_{bot}$. Since constraints are forming "steps" (piecewise linear), the area function is piecewise quadratic.
+### 2.3 Quadratic Maximization
+When a rectangle's corner slides along a non-isothetic (slanted) obstacle (Flexible Support), its area is a quadratic function of the contact position.
+*   **Formula**: Area $A(\alpha) = (X_2(\alpha) - X_1(\alpha))(Y_1(\alpha) - Y_2(\alpha))$.
+*   **Optimization**: Since the area function is piecewise quadratic, the maximum occurs either at the boundaries of the sliding interval (endpoints/intersections) or where the derivative $A'(\alpha) = 0$.
 
 ## 3. Algorithm Description ($O(n \log^2 n)$)
 
 ### 3.1 Divide-and-Conquer
-1.  **Divide**: Given a **Window $W$** (rectangular floor region), partition it by a cut line (Vertical or Horizontal) chosen at the **Median Coordinate** of the obstacle endpoints within $W$.
-2.  **Conquer**: Recursively solve Left and Right (or Top and Bottom) halves.
-3.  **Merge**: Solve the **Crossing MER** problem.
+1.  **Divide**: Partition Window $W$ by a cut line (Vertical $VP$ or Horizontal $HP$) at the median coordinate.
+2.  **Conquer**: Recursively solve for the two halves.
+3.  **Merge**: Solve the **Crossing MER** problem. The Max Area is $\max(Area_{left}, Area_{right}, Area_{crossing})$.
 
 ### 3.2 The Crossing MER Problem ("solveCentral")
-1.  **Staircase Construction**: Compute the 4 Maximal Empty Stairs ($S_1, S_2, S_3, S_4$) originating from the center $O$.
-    *   $S_1$ (TR): Min X for $y > O_y$
-    *   $S_2$ (TL): Max X for $y > O_y$
-    *   $S_3$ (BL): Max X for $y < O_y$
-    *   $S_4$ (BR): Min X for $y < O_y$
-2.  **Interaction Solving**: Find optimal $y_{top}, y_{bot}$ such that $Area = (min(S_1(y_t), S_4(y_b)) - max(S_2(y_t), S_3(y_b))) \times (y_t - y_b)$ is maximized.
+To find the MER crossing the dividing line (say, Vertical $VP$):
+1.  **Sub-split**: Introduce a Horizontal cut $PH$ at the median y-coordinate on $VP$. Intersection is $c^*$.
+2.  **Cases**:
+    *   (i) MER contains $c^*$.
+    *   (ii) MER crosses $VP$ but is above $PH$.
+    *   (iii) MER crosses $VP$ but is below $PH$.
+3.  **Solving Case (i) (Containing $c^*$):**
+    *   **Staircase Construction**: Compute 4 Maximal Empty Stairs ($S^*_1, S^*_2, S^*_3, S^*_4$) originating from $c^*$.
+        *   $S^*_1$ (TR), $S^*_2$ (TL), $S^*_3$ (BL), $S^*_4$ (BR).
+    *   **Matrix Search**: The problem reduces to finding optimal corners on these stairs. The area maximization can be modeled as searching for the maximum entry in a matrix $M$ where $M_{ij}$ is the area formed by interacting steps $i$ (from $S^*_2$) and $j$ (from $S^*_4$).
+    *   **Total Monotonicity**: The matrix $M$ satisfies the *totally monotone* property (or can be decomposed into such matrices), allowing the maximum to be found in $O(n)$ time using the SMAWK algorithm (or simple linear scan if simplified).
 
 ## 4. Implementation Specifications
 
 ### 4.1 Architecture
 *   **Language**: TypeScript (Strict Mode).
 *   **Data Structures**:
-    *   `Stair`: Interval-based storage of segments. `getX(y)` returns constraint value.
-    *   `Segment`: Basic geometric primitive.
+    *   `Stair`: Interval-tree or Array-based storage of segments representing the staircase.
+    *   `Segment`: Geometric primitive.
+    *   `PMER`: Candidate rectangle structure.
 
-### 4.2 Solver
-The `MerSolver` uses an **Explicit Stack** with Coordinate Splitting to ensure balanced recursion trees and avoid stack overflow.
+### 4.2 Solver Details
+*   **Explicit Stack**: Use coordinate splitting to avoid recursion depth issues.
+*   **Corner Handling**: Critically, the solver must handle "Flexible Supports" where the optimal rectangle corner touches an obstacle vertex or slides along a slanted line, not just "Fixed Supports" (grid alignment).
