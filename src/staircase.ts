@@ -1,17 +1,25 @@
 import { Segment } from './geometry';
 
+/**
+ * Represents a segment of the staircase boundary.
+ * Maps a generic vertical interval [domainMin, domainMax] to a geometric obstacle segment.
+ */
 export interface StairSegment {
     seg: Segment; // The constraint segment
     domainMin: number; // yMin
     domainMax: number; // yMax
 }
 
+/**
+ * A "Stair" represents the monotonic boundary of empty space in a quadrant.
+ * It is essentially a piecewise-defined function x = f(y) representing the nearest obstacle.
+ */
 export class Stair {
     constructor(public segments: StairSegment[]) { }
 
     /**
      * Get value x at y.
-     * Assumes segments are sorted and cover y.
+     * Assumes segments are sorted by domain and cover y.
      */
     getX(y: number): number {
         for (const s of this.segments) {
@@ -28,7 +36,7 @@ export class Stair {
     }
 
     /**
-     * Returns Min X over interval [y1, y2]
+     * Returns Min X over interval [y1, y2] on this stair.
      */
     getMinX(y1: number, y2: number): number {
         let minVal = Infinity;
@@ -44,7 +52,7 @@ export class Stair {
 
             if (iStart <= iEnd + 1e-9) {
                 found = true;
-                // Check endpoints of the segment in the range
+                // Check endpoints of the segment in the range because x(t) is monotonic for line segments
                 const v1 = s.seg.getX(iStart);
                 const v2 = s.seg.getX(iEnd);
                 minVal = Math.min(minVal, v1, v2);
@@ -54,7 +62,7 @@ export class Stair {
     }
 
     /**
-     * Returns Max X over interval [y1, y2]
+     * Returns Max X over interval [y1, y2] on this stair.
      */
     getMaxX(y1: number, y2: number): number {
         let maxVal = -Infinity;
@@ -79,12 +87,15 @@ export class Stair {
     }
 }
 
+/**
+ * Helper class to construct a Stair by merging overlapping constraints.
+ * Maintains the sequence of intervals representing the "closest" wall found so far.
+ */
 export class StairBuilder {
     intervals: StairSegment[] = [];
 
     constructor(initialMin: number, initialMax: number, initialVal: number) {
-        // Create a vertical segment representing the initial wall
-        // Vertical segment: X is constant.
+        // Create a vertical segment representing the initial wall/bound
         const wall = new Segment({ x: initialVal, y: initialMin }, { x: initialVal, y: initialMax });
         this.intervals.push({
             seg: wall,
@@ -93,95 +104,108 @@ export class StairBuilder {
         });
     }
 
+    /**
+     * Adds a new constraint segment to the staircase.
+     * Updates intervals to respect the tighter constraint (smaller X if minimizing, larger X if maximizing).
+     */
     addConstraint(yMin: number, yMax: number, constraintSeg: Segment, isMinimizing: boolean) {
         const newIntervals: StairSegment[] = [];
+        const EPS = 1e-9;
+
         for (const interval of this.intervals) {
-            // Compute overlap
+            // Compute overlap between current interval and constraint
             const start = Math.max(interval.domainMin, yMin);
             const end = Math.min(interval.domainMax, yMax);
 
-            if (start <= end + 1e-9) {
-                // Parts before overlap
-                if (interval.domainMin < start - 1e-9) {
-                    newIntervals.push({ ...interval, domainMax: start });
-                }
-
-                // Overlap part
-                const overlapSeg: StairSegment = {
-                    seg: interval.seg,
-                    domainMin: start,
-                    domainMax: end
-                };
-
-                // Compare constraintSeg vs current seg (interval.seg)
-                // We pick which one?
-                // isMinimizing=true (Quad 1/4): we want SMALLER x.
-                // isMinimizing=false (Quad 2/3): we want LARGER x.
-
-                const mid = (start + end) / 2;
-                const valCurrent = interval.seg.getX(mid);
-                const valNew = constraintSeg.getX(mid);
-
-                const betterAtStart = isMinimizing ? (constraintSeg.getX(start) < interval.seg.getX(start)) : (constraintSeg.getX(start) > interval.seg.getX(start));
-                const betterAtEnd = isMinimizing ? (constraintSeg.getX(end) < interval.seg.getX(end)) : (constraintSeg.getX(end) > interval.seg.getX(end));
-
-                if (betterAtStart && betterAtEnd) {
-                    overlapSeg.seg = constraintSeg;
-                } else if (!betterAtStart && !betterAtEnd) {
-                    // Keep current
-                } else {
-                    // Intersection
-                    // Simplified: just use the one better at midpoint for now to avoid complexity in this file,
-                    // or do split.
-                    // For robustness of v1 demo, let's pick the one better at midpoint.
-                    // Note: This approximates the "Lower Envelope" but misses the exact vertex.
-                    // Ideally we solve intersection.
-
-                    // Let's try intersection approx:
-                    const lC = this.getLine(interval.seg);
-                    const lN = this.getLine(constraintSeg);
-                    let crossY = start;
-                    if (Math.abs(lC.m - lN.m) > 1e-9) {
-                        crossY = (lN.c - lC.c) / (lC.m - lN.m);
-                    } else {
-                        crossY = mid;
-                    }
-
-                    if (crossY > start + 1e-9 && crossY < end - 1e-9) {
-                        const seg1 = betterAtStart ? constraintSeg : interval.seg;
-                        const seg2 = betterAtEnd ? constraintSeg : interval.seg;
-                        newIntervals.push({ seg: seg1, domainMin: start, domainMax: crossY });
-                        newIntervals.push({ seg: seg2, domainMin: crossY, domainMax: end });
-
-                        if (interval.domainMax > end) {
-                            newIntervals.push({ ...interval, domainMin: end });
-                        }
-                        continue;
-                    } else {
-                        if (isMinimizing ? (valNew < valCurrent) : (valNew > valCurrent)) {
-                            overlapSeg.seg = constraintSeg;
-                        }
-                    }
-                }
-                newIntervals.push(overlapSeg);
-
-                // Parts after overlap
-                if (interval.domainMax > end) {
-                    newIntervals.push({ ...interval, domainMin: end });
-                }
-
-            } else {
+            // If no valid overlap
+            if (start > end + EPS) {
                 newIntervals.push(interval);
+                continue;
+            }
+
+            // 1. Pre-overlap part
+            if (interval.domainMin < start - EPS) {
+                newIntervals.push({ ...interval, domainMax: start });
+            }
+
+            // 2. Overlap part - resolve conflict
+            const resolved = this.resolveOverlap(interval.seg, constraintSeg, start, end, isMinimizing);
+            newIntervals.push(...resolved);
+
+            // 3. Post-overlap part
+            if (interval.domainMax > end + EPS) {
+                newIntervals.push({ ...interval, domainMin: end });
             }
         }
         this.intervals = newIntervals;
     }
 
-    getLine(s: Segment) {
-        if (Math.abs(s.p1.y - s.p2.y) < 1e-9) return { m: 0, c: Math.max(s.p1.x, s.p2.x) };
-        if (Math.abs(s.p1.x - s.p2.x) < 1e-9) return { m: 0, c: s.p1.x }; // Vertical: X = c. m=0 (dx/dy)
+    /**
+     * Resolves the conflict between two segments over an overlapping Y-interval.
+     * Returns 1 or 2 new StairSegments depending on if they cross.
+     */
+    private resolveOverlap(
+        currentSeg: Segment,
+        newSeg: Segment,
+        start: number,
+        end: number,
+        isMinimizing: boolean
+    ): StairSegment[] {
+        const mid = (start + end) / 2;
 
-        // Slope dx/dy
+        // Check which one is better at start and end
+        // "Better" means stricter constraint: smaller X if minimizing, larger X if maximizing.
+        const valStartNew = newSeg.getX(start);
+        const valStartCur = currentSeg.getX(start);
+        const valEndNew = newSeg.getX(end);
+        const valEndCur = currentSeg.getX(end);
+
+        const betterAtStart = isMinimizing ? (valStartNew < valStartCur) : (valStartNew > valStartCur);
+        const betterAtEnd = isMinimizing ? (valEndNew < valEndCur) : (valEndNew > valEndCur);
+
+        // Case 1: One segment dominates the other completely on this interval
+        if (betterAtStart && betterAtEnd) {
+            return [{ seg: newSeg, domainMin: start, domainMax: end }];
+        }
+        if (!betterAtStart && !betterAtEnd) {
+            // Current one is better (or equal) everywhere
+            return [{ seg: currentSeg, domainMin: start, domainMax: end }];
+        }
+
+        // Case 2: Intersection
+        // Find intersection Y
+        const lC = this.getLine(currentSeg);
+        const lN = this.getLine(newSeg);
+        let crossY = mid;
+
+        if (Math.abs(lC.m - lN.m) > 1e-9) {
+            crossY = (lN.c - lC.c) / (lC.m - lN.m);
+        }
+
+        // Validate intersection is strictly inside
+        if (crossY > start + 1e-9 && crossY < end - 1e-9) {
+            const firstSeg = betterAtStart ? newSeg : currentSeg;
+            const secondSeg = betterAtEnd ? newSeg : currentSeg;
+            return [
+                { seg: firstSeg, domainMin: start, domainMax: crossY },
+                { seg: secondSeg, domainMin: crossY, domainMax: end }
+            ];
+        } else {
+            // Fallback for near-parallel or numerical noise: pick winner at midpoint
+            // This is "Case 1" logic re-applied at midpoint
+            const valMidNew = newSeg.getX(mid);
+            const valMidCur = currentSeg.getX(mid);
+            const betterAtMid = isMinimizing ? (valMidNew < valMidCur) : (valMidNew > valMidCur);
+            return [{ seg: betterAtMid ? newSeg : currentSeg, domainMin: start, domainMax: end }];
+        }
+    }
+
+    private getLine(s: Segment) {
+        if (Math.abs(s.p1.y - s.p2.y) < 1e-9) return { m: 0, c: Math.max(s.p1.x, s.p2.x) };
+        if (Math.abs(s.p1.x - s.p2.x) < 1e-9) return { m: 0, c: s.p1.x }; // Vertical: x = c, treat m=0 for inverse logic? No. This helper is for x = my + c form.
+
+        // Form x = m*y + c
+        // slope dx/dy
         const m = (s.p2.x - s.p1.x) / (s.p2.y - s.p1.y);
         const c = s.p1.x - m * s.p1.y;
         return { m, c };

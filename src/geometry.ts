@@ -11,6 +11,10 @@ export interface Rectangle {
     height: number;
 }
 
+/**
+ * Represents a line segment defined by two endpoints.
+ * Provides geometric utility methods for intersection and projection.
+ */
 export class Segment {
     constructor(public p1: Point, public p2: Point) { }
 
@@ -19,24 +23,41 @@ export class Segment {
     get minY(): number { return Math.min(this.p1.y, this.p2.y); }
     get maxY(): number { return Math.max(this.p1.y, this.p2.y); }
 
-    // y = mx + k
+    /**
+     * The slope (m) of the line containing this segment.
+     * Returns Infinity for vertical lines.
+     */
     get slope(): number {
         if (this.p1.x === this.p2.x) return Infinity; // Vertical
         return (this.p2.y - this.p1.y) / (this.p2.x - this.p1.x);
     }
 
+    /**
+     * The y-intercept (c) of the line containing this segment (y = mx + c).
+     * Returns NaN for vertical lines.
+     */
     get intercept(): number {
         if (this.p1.x === this.p2.x) return NaN;
         return this.p1.y - this.slope * this.p1.x;
     }
 
-    // Get y for a given x (assuming x is within range)
+    /**
+     * Calculates the Y coordinate on the line at a given X.
+     * Note: This does NOT check if the X is within the segment's bounds.
+     * @param x The X coordinate.
+     * @returns The corresponding Y coordinate on the infinite line.
+     */
     getY(x: number): number {
         if (Math.abs(this.p1.x - this.p2.x) < 1e-9) return Math.max(this.p1.y, this.p2.y);
         return this.slope * x + this.intercept;
     }
 
-    // Get x for a given y
+    /**
+     * Calculates the X coordinate on the line at a given Y.
+     * Note: This does NOT check if the Y is within the segment's bounds.
+     * @param y The Y coordinate.
+     * @returns The corresponding X coordinate on the infinite line.
+     */
     getX(y: number): number {
         if (Math.abs(this.p1.y - this.p2.y) < 1e-9) return Math.max(this.p1.x, this.p2.x); // Horizontal
         if (!isFinite(this.slope)) return this.p1.x; // Vertical
@@ -45,17 +66,22 @@ export class Segment {
     }
 }
 
+/**
+ * Calculates the area of a rectangle.
+ */
 export function rectArea(r: Rectangle): number {
     return r.width * r.height;
 }
 
 /**
- * Optimizes f(x) = ax^2 + bx + c subject to x in [minX, maxX]
- * Returns {x, val}
+ * Optimizes the quadratic function f(x) = ax^2 + bx + c within the distinct interval [minX, maxX].
+ * Checks boundary points and the vertex (critical point) if it lies within the interval.
+ * 
+ * @returns The x value maximizing the function and the maximum value itself.
  */
 export function maximizeQuadratic(a: number, b: number, c: number, minX: number, maxX: number): { x: number, val: number } {
     // Critical point at x = -b / (2a)
-    let candidates = [minX, maxX];
+    const candidates = [minX, maxX];
     if (Math.abs(a) > 1e-9) {
         const crit = -b / (2 * a);
         if (crit >= minX && crit <= maxX) {
@@ -78,8 +104,10 @@ export function maximizeQuadratic(a: number, b: number, c: number, minX: number,
 }
 
 /**
- * Checks if a segment intersects the strict interior of a rectangle.
- * Touching boundary is NOT considered intersection (returns false).
+ * Checks if a segment intersects the STRICT interior of a rectangle.
+ * Touching the boundary is NOT considered an intersection.
+ * 
+ * Used for verifying that the found Empty Rectangle is indeed empty.
  */
 export function segmentIntersectsRectangle(s: Segment, r: Rectangle): boolean {
     const EPS = 1e-5;
@@ -99,12 +127,13 @@ export function segmentIntersectsRectangle(s: Segment, r: Rectangle): boolean {
     // Bounding box check (strict)
     if (maxX < rMinX || minX > rMaxX || maxY < rMinY || minY > rMaxY) return false;
 
-    // Check endpoints inside
+    // Check if either endpoint is strictly inside
     if (s.p1.x > rMinX && s.p1.x < rMaxX && s.p1.y > rMinY && s.p1.y < rMaxY) return true;
     if (s.p2.x > rMinX && s.p2.x < rMaxX && s.p2.y > rMinY && s.p2.y < rMaxY) return true;
 
-    // Check intersection with vertical lines x = rMinX, x = rMaxX
+    // Check intersection with vertical lines x = rMinX, x = rMaxX within Y-range
     if (Math.abs(s.p1.x - s.p2.x) > 1e-9) {
+        // x(t) is monotonic, check y at boundary x
         const yAtMinX = s.getY(rMinX);
         if (yAtMinX > rMinY && yAtMinX < rMaxY && ((s.p1.x <= rMinX && s.p2.x >= rMinX) || (s.p2.x <= rMinX && s.p1.x >= rMinX))) return true;
 
@@ -112,7 +141,7 @@ export function segmentIntersectsRectangle(s: Segment, r: Rectangle): boolean {
         if (yAtMaxX > rMinY && yAtMaxX < rMaxY && ((s.p1.x <= rMaxX && s.p2.x >= rMaxX) || (s.p2.x <= rMaxX && s.p1.x >= rMaxX))) return true;
     }
 
-    // Check intersection with horizontal lines y = rMinY, y = rMaxY
+    // Check intersection with horizontal lines y = rMinY, y = rMaxY within X-range
     if (Math.abs(s.p1.y - s.p2.y) > 1e-9) {
         const xAtMinY = s.getX(rMinY);
         if (xAtMinY > rMinX && xAtMinY < rMaxX && ((s.p1.y <= rMinY && s.p2.y >= rMinY) || (s.p2.y <= rMinY && s.p1.y >= rMinY))) return true;
