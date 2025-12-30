@@ -29,8 +29,16 @@ app.innerHTML = `
 
     <div class="controls">
       <h3>Presets</h3>
-      <button id="uShapeBtn" class="secondary">U-Shape</button>
-      <button id="crossBtn" class="secondary">Cross</button>
+      <div class="grid-2">
+          <button id="uShapeBtn" class="secondary" title="Standard U-Shape test case">U-Shape</button>
+          <button id="crossBtn" class="secondary" title="Crossing lines test case">Cross</button>
+          <button id="combBtn" class="secondary" title="Interleaving bars">Comb</button>
+          <button id="spiralBtn" class="secondary" title="Square spiral">Spiral</button>
+          <button id="mazeBtn" class="secondary" title="Random grid maze">Maze</button>
+          <button id="staircaseBtn" class="secondary" title="Monotonic steps">Staircase</button>
+          <button id="denseBtn" class="secondary" title="50 random segments">Dense</button>
+          <button id="starBtn" class="secondary" title="Radiating lines">Star</button>
+      </div>
     </div>
 
     <div class="stats" id="stats">
@@ -229,6 +237,38 @@ document.getElementById('uShapeBtn')!.addEventListener('click', () => {
 
 document.getElementById('crossBtn')!.addEventListener('click', () => {
     state.loadCross();
+    draw();
+    updateStats();
+});
+
+// New Presets
+document.getElementById('combBtn')!.addEventListener('click', () => {
+    state.loadComb();
+    draw();
+    updateStats();
+});
+document.getElementById('spiralBtn')!.addEventListener('click', () => {
+    state.loadSpiral();
+    draw();
+    updateStats();
+});
+document.getElementById('mazeBtn')!.addEventListener('click', () => {
+    state.loadMaze();
+    draw();
+    updateStats();
+});
+document.getElementById('staircaseBtn')!.addEventListener('click', () => {
+    state.loadStaircase();
+    draw();
+    updateStats();
+});
+document.getElementById('denseBtn')!.addEventListener('click', () => {
+    state.loadDense();
+    draw();
+    updateStats();
+});
+document.getElementById('starBtn')!.addEventListener('click', () => {
+    state.loadStar();
     draw();
     updateStats();
 });
