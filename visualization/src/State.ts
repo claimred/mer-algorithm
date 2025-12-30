@@ -7,21 +7,77 @@ export class State {
     public result: Rectangle | null = null;
     public solver: MerSolver;
 
+    // History
+    private undoStack: { obstacles: Segment[], result: Rectangle | null }[] = [];
+    private redoStack: { obstacles: Segment[], result: Rectangle | null }[] = [];
+    private MAX_HISTORY = 50;
+
     constructor() {
         this.solver = new MerSolver();
     }
 
+    private snapshot() {
+        // Push current state to undo stack
+        this.undoStack.push({
+            obstacles: [...this.obstacles], // Shallow copy of array is enough if segments are immutable-ish, but let's be safe
+            result: this.result ? { ...this.result } : null
+        });
+
+        if (this.undoStack.length > this.MAX_HISTORY) {
+            this.undoStack.shift(); // Drop oldest
+        }
+
+        // Clear redo stack on new action
+        this.redoStack = [];
+    }
+
+    undo() {
+        if (this.undoStack.length === 0) return;
+
+        // Push current to redo
+        this.redoStack.push({
+            obstacles: [...this.obstacles],
+            result: this.result ? { ...this.result } : null
+        });
+
+        // Pop from undo
+        const state = this.undoStack.pop()!;
+        this.obstacles = state.obstacles;
+        this.result = state.result;
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return;
+
+        // Push current to undo
+        this.undoStack.push({
+            obstacles: [...this.obstacles],
+            result: this.result ? { ...this.result } : null
+        });
+
+        // Pop from redo
+        const state = this.redoStack.pop()!;
+        this.obstacles = state.obstacles;
+        this.result = state.result;
+    }
+
+    canUndo() { return this.undoStack.length > 0; }
+    canRedo() { return this.redoStack.length > 0; }
+
     addObstacle(s: Segment) {
+        this.snapshot();
         this.obstacles.push(s);
         this.result = null; // Invalidate result
     }
 
     setObstacles(obs: Segment[]) {
+        this.snapshot();
         this.obstacles = obs;
         this.result = null;
     }
 
     clear() {
+        this.snapshot();
         this.obstacles = [];
         this.result = null;
     }
@@ -31,6 +87,7 @@ export class State {
     public isDebugging = false;
 
     solve() {
+        this.snapshot(); // Solve changes the result, so snapshot
         const t0 = performance.now();
         this.result = this.solver.solveSegments(this.obstacles, this.bounds);
         const t1 = performance.now();
