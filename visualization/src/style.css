@@ -59,6 +59,12 @@ canvas {
     gap: 0.5rem;
 }
 
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
 button {
     padding: 8px 16px;
     background: #646cff;
