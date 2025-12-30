@@ -54,7 +54,12 @@ The heart of the system.
         git checkout -b fix/issue-description
         ```
 
-3.  **Implementation & Comparison**:
+3.  **Feature Specification (New Features)**:
+    -   **Ask Questions**: Interview the user to clarify requirements.
+    -   **Create Spec**: Create a markdown file in `features/` (e.g., `features/0-my-feature.md`).
+    -   **Proceed**: Only start coding after the spec is committed.
+
+4.  **Implementation & Comparison**:
     -   Make your changes.
     -   **Run Tests**: You must run ALL tests (Algo & Vis) before PR.
         ```bash
@@ -62,7 +67,7 @@ The heart of the system.
         cd visualization && npm run build # Visualizer build check
         ```
 
-4.  **Pull Request**:
+5.  **Pull Request**:
     -   Create a PR from your branch to `main`.
     -   **Extensive Documentation Required**: The PR body must include:
         *   **Summary**: High-level overview of changes.
@@ -72,7 +77,7 @@ The heart of the system.
     -   Link the relevant Issue.
     -   Wait for approval.
 
-5.  **Merge**:
+6.  **Merge**:
     -   Rebase on `main` if needed to keep history semi-linear.
     -   Merge only after all checks pass.
 
