@@ -19,6 +19,15 @@ Based on the paper:
 *   **TypeScript Implementation**: Fully typed and modular.
 *   **Optimization**: Uses staircase constraint envelopes.
 
+## Contributing
+
+We follow a strict **Feature Branch Workflow**.
+1.  Create a GitHub Issue.
+2.  Create a branch (`feature/...` or `fix/...`).
+3.  **Never commit to main**.
+4.  Run `npm test` and `npm run build` (in `visualization/`).
+5.  Submit a Pull Request.
+
 ## Usage
 
 1.  **Install Dependencies**:
