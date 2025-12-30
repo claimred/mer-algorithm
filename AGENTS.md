@@ -39,6 +39,11 @@ The heart of the system.
 1.  **Issue Creation**:
     -   Identify the task (bug or feature).
     -   Create a GitHub Issue with a detailed description.
+    -   **Extensive Documentation Required**: The Issue body must include:
+        *   **Problem Description**: What is the issue?
+        *   **Context**: Why is this important?
+        *   **Reproduction Steps**: How to trigger the bug (for bugs).
+        *   **Success Criteria**: Definition of done.
 
 2.  **Branching**:
     -   **NEVER commit to `main` directly.**
@@ -59,6 +64,11 @@ The heart of the system.
 
 4.  **Pull Request**:
     -   Create a PR from your branch to `main`.
+    -   **Extensive Documentation Required**: The PR body must include:
+        *   **Summary**: High-level overview of changes.
+        *   **Implementation Details**: Specifics of what was modified and why.
+        *   **Test Plan**: Exact commands run to verify.
+        *   **Verification Results**: Evidence (logs, screenshots) proving correctness.
     -   Link the relevant Issue.
     -   Wait for approval.
 
