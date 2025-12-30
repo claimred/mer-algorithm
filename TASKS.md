@@ -19,6 +19,9 @@
 - [ ] **Export Options**: Add buttons to export the solution state as JSON or download the canvas as an image.
 - [ ] **Advanced Presets**: Add more complex debug scenarios (e.g., "Comb", "Spiral", "Maze").
 - [ ] **UI Polish**: Improve styling (currently vanilla CSS) for a more modern look.
+- [ ] **Undo/Redo**: Implement state history for obstacle manipulation.
+- [ ] **Boundary Constraints**: Prevent dragging obstacles outside the floor boundaries.
+- [ ] **Isothetic Draw**: Support holding `Shift` to draw perfectly horizontal or vertical segments.
 
 ## Documentation
 - [x] **API Documentation**: Add TSDoc comments to `MerSolver`, `Stair`, and `StairBuilder` for better IDE support.
