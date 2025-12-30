@@ -1,5 +1,9 @@
 # Project Tasks & Roadmap
 
+## Urgent Fixes
+- [ ] **Cross Shape Bug**: Investigate and fix reported bug with Cross shape in the center.
+- [ ] **U-Shape Test Coverage**: Expand test suite for U-shape scenarios to prevent regressions.
+
 ## DevOps & Infrastructure
 - [ ] **Add CI Pipeline**: Configure GitHub Actions to run `npm test` and `npm run build` on every push and pull request.
 - [ ] **Add CD Pipeline**: Configure GitHub Actions to automatically deploy the `visualization` project to GitHub Pages upon merging to `main`.
