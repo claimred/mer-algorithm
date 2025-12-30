@@ -67,7 +67,12 @@ The heart of the system.
         cd visualization && npm run build # Visualizer build check
         ```
 
-5.  **Pull Request**:
+5.  **Documentation Review**:
+    -   **Pre-PR Check**: Before creating a Pull Request, you **MUST** review all relevant markdown files (`README.md`, `TASKS.md`, `AGENTS.md`, etc.).
+    -   **Update**: Ensure documentation aligns with the code changes (features, API updates, task status).
+    -   **Formatting**: Check and fix any markdown formatting errors.
+
+6.  **Pull Request**:
     -   Create a PR from your branch to `main`.
     -   **Extensive Documentation Required**: The PR body must include:
         *   **Summary**: High-level overview of changes.
@@ -77,7 +82,7 @@ The heart of the system.
     -   Link the relevant Issue.
     -   Wait for approval.
 
-6.  **Merge**:
+7.  **Merge**:
     -   Rebase on `main` if needed to keep history semi-linear.
     -   Merge only after all checks pass.
 
