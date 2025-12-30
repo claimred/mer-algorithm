@@ -295,11 +295,21 @@ function buildStair(segments: Segment[], quadrant: number, center: Point, window
             // Let's use getLine to be safe or geometry.
             // Actually, if we just check endpoints at effYMin, effYMax?
             // Monotonic X/Y means min/max X occur at boundaries of Y-interval.
-            const xAtYMin = s.getX(effYMin);
-            const xAtYMax = s.getX(effYMax);
+            // NOTE: For horizontal segments, s.getX(y) returns max(x), which is wrong for range checking.
+            //       We handle horizontal segments separately below (m <= EPS), so skip this check for them.
+            const isHorizontal = Math.abs(s.p1.y - s.p2.y) < EPS;
 
-            const minXSeg = Math.min(xAtYMin, xAtYMax);
-            const maxXSeg = Math.max(xAtYMin, xAtYMax);
+            let minXSeg: number, maxXSeg: number;
+            if (isHorizontal) {
+                // For horizontal segments, use direct segment bounds
+                minXSeg = s.minX;
+                maxXSeg = s.maxX;
+            } else {
+                const xAtYMin = s.getX(effYMin);
+                const xAtYMax = s.getX(effYMax);
+                minXSeg = Math.min(xAtYMin, xAtYMax);
+                maxXSeg = Math.max(xAtYMin, xAtYMax);
+            }
 
             // If completely outside X-range
             if (maxXSeg < qXMin - EPS || minXSeg > qXMax + EPS) continue;

@@ -29,6 +29,11 @@ describe('MER Algorithm', () => {
         // Half-space is 100x50 = 5000 approx.
         expect(rectArea(res)).toBeGreaterThan(1990);
         expect(rectArea(res)).toBeLessThanOrEqual(5001);
+
+        // Validate result doesn't intersect obstacles
+        for (const s of obs) {
+            expect(segmentIntersectsRectangle(s, res)).toBe(false);
+        }
     });
 
     it('should find optimal area for U-Shape', () => {
