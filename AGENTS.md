@@ -67,7 +67,8 @@ The heart of the system.
     -   Merge only after all checks pass.
 
 ### 2. Debugging
-Use `debug_arbitrary.ts` for specific geometric scenarios (Diagonal, Diamond, etc.).
+-   **Directory**: All debug scripts (e.g., `debug_*.ts`, `trace_*.ts`, `test_*.ts`) **MUST** be created in the `debug/` directory.
+-   **Git**: Do not commit experimental debug scripts to the repository root.
 
 ## Future Work
 -   **Optimization**: `solveStairInteractions` uses **Monotone Matrix Search (SMAWK)** for $O(n)$ speed per merge.
