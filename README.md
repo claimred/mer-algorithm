@@ -19,6 +19,7 @@ Based on the paper:
 *   **TypeScript Implementation**: Fully typed and modular.
 *   **Optimization**: Uses staircase constraint envelopes.
 *   **Undo/Redo**: Full state history for obstacle manipulation.
+*   **UI Polish**: Professional "Hypbrid" dark-mode CAD interface for visualization.
 
 ## Contributing
 

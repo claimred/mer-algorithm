@@ -1,10 +1,37 @@
 :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
+    /* Color Palette - Professional CAD (Dark Theme) */
+    --color-bg: #1e1e1e;
+    /* VS Code Dark Editor Bg */
+    --color-panel-bg: #252526;
+    /* VS Code Side Bar Bg */
+    --color-text-primary: #cccccc;
+    --color-text-secondary: #909090;
+    --color-border: #3e3e42;
+    /* Subtle dark border */
+
+    --color-primary: #007acc;
+    /* VS Code Blue */
+    --color-primary-hover: #0098ff;
+    --color-accent: #007acc;
+
+    --color-button-bg: #3c3c3c;
+    --color-button-hover: #4c4c4c;
+    --color-button-text: #ffffff;
+
+    /* Typography */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-size-base: 13px;
+    --font-size-header: 11px;
+    /* Uppercase labels */
+
+    /* Layout */
+    --sidebar-width: 280px;
+    --spacing-unit: 8px;
+    --panel-radius: 0px;
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
@@ -12,95 +39,130 @@ body {
     display: flex;
     min-width: 320px;
     min-height: 100vh;
+    font-family: var(--font-family);
+    font-size: var(--font-size-base);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg);
+    line-height: 1.4;
 }
 
 #app {
     display: flex;
     width: 100%;
     height: 100vh;
+    overflow: hidden;
 }
 
+/* --- Sidebar (Properties Panel) --- */
 .sidebar {
-    width: 300px;
-    background: #1a1a1a;
-    padding: 20px;
+    width: var(--sidebar-width);
+    background: var(--color-panel-bg);
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    border-right: 1px solid #333;
+    padding: 0;
+    /* Internal padding handled by sections */
+    flex-shrink: 0;
+    z-index: 10;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
 }
 
+.sidebar-header {
+    padding: 12px 16px;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.control-group {
+    padding: 16px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.control-group-title {
+    text-transform: uppercase;
+    font-size: var(--font-size-header);
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+/* --- Main Area (Canvas) --- */
 .main {
     flex: 1;
+    background: var(--color-bg);
+    position: relative;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #2a2a2a;
-    position: relative;
-    overflow: hidden;
-    /* Prevent scrollbars */
-    width: 100%;
-    height: 100%;
+    padding: 20px;
+    /* "Inset" look */
 }
 
 canvas {
-    background: #fff;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    background: #ffffff;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+    /* Subtle border */
     cursor: crosshair;
     display: block;
-    /* Removes bottom margin */
-    width: 100%;
-    height: 100%;
 }
 
-.controls {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+/* --- UI Controls --- */
+button {
+    padding: 6px 12px;
+    background: var(--color-button-bg);
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--color-button-text);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    text-align: center;
+}
+
+button:hover {
+    background: var(--color-button-hover);
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+/* Primary Actions (Solve, etc.) */
+button.primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+button.primary:hover {
+    background: var(--color-primary-hover);
 }
 
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 5px;
+    gap: 8px;
 }
 
-button {
-    padding: 8px 16px;
-    background: #646cff;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-button:hover {
-    background: #535bf2;
-}
-
-button.secondary {
-    background: #444;
-}
-
-button.secondary:hover {
-    background: #555;
-}
-
+/* Stats Panel */
 .stats {
     margin-top: auto;
-    font-family: monospace;
-    font-size: 0.9em;
-    color: #ccc;
-}
-
-h2 {
-    margin: 0 0 10px 0;
-    font-size: 1.2em;
-}
-
-h3 {
-    margin: 10px 0 5px 0;
-    font-size: 1em;
-    color: #aaa;
+    padding: 12px 16px;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--color-text-secondary);
 }

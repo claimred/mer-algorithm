@@ -52,7 +52,7 @@ export class Renderer {
     }
 
     drawGrid() {
-        this.ctx.strokeStyle = '#e0e0e0';
+        this.ctx.strokeStyle = '#e0e0e0'; // Light grid for white bg
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
 
@@ -93,7 +93,7 @@ export class Renderer {
         const p1 = this.toScreen(s.p1.x, s.p1.y);
         const p2 = this.toScreen(s.p2.x, s.p2.y);
 
-        this.ctx.strokeStyle = '#000';
+        this.ctx.strokeStyle = '#000'; // Black obstacles
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(p1.x, p1.y);

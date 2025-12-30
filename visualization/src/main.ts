@@ -7,22 +7,24 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 
 app.innerHTML = `
   <div class="sidebar">
-    <h2>MER Visualizer</h2>
+    <div class="sidebar-header">
+      MER Visualizer
+    </div>
     
-    <div class="controls">
-      <h3>Actions</h3>
+    <div class="control-group">
+      <div class="control-group-title">Actions</div>
       <div class="grid-2">
-         <button id="undoBtn" class="secondary" disabled>Undo (Ctrl+Z)</button>
-         <button id="redoBtn" class="secondary" disabled>Redo (Ctrl+Y)</button>
+         <button id="undoBtn" class="secondary" disabled title="Undo (Ctrl+Z)">Undo</button>
+         <button id="redoBtn" class="secondary" disabled title="Redo (Ctrl+Y)">Redo</button>
       </div>
-      <button id="solveBtn">Solve</button>
-      <button id="clearBtn" class="secondary">Clear</button>
-      <button id="randomBtn" class="secondary">Randomize</button>
+      <button id="solveBtn" class="primary">Solve MER</button>
+      <button id="clearBtn">Clear All</button>
+      <button id="randomBtn">Randomize</button>
     </div>
 
-    <div class="controls">
-      <h3>Debug</h3>
-      <button id="debugBtn">Start Debug</button>
+    <div class="control-group">
+      <div class="control-group-title">Debug</div>
+      <button id="debugBtn">Start Debug Session</button>
       <div id="debugControls" style="display:none; gap: 5px; margin-top: 5px;">
         <button id="nextBtn" style="flex:1;">Next</button>
         <button id="playBtn" style="flex:1;">Play</button>
@@ -30,18 +32,17 @@ app.innerHTML = `
       </div>
     </div>
 
-
-    <div class="controls">
-      <h3>Presets</h3>
+    <div class="control-group">
+      <div class="control-group-title">Presets</div>
       <div class="grid-2">
-          <button id="uShapeBtn" class="secondary" title="Standard U-Shape test case">U-Shape</button>
-          <button id="crossBtn" class="secondary" title="Crossing lines test case">Cross</button>
-          <button id="combBtn" class="secondary" title="Interleaving bars">Comb</button>
-          <button id="spiralBtn" class="secondary" title="Square spiral">Spiral</button>
-          <button id="mazeBtn" class="secondary" title="Random grid maze">Maze</button>
-          <button id="staircaseBtn" class="secondary" title="Monotonic steps">Staircase</button>
-          <button id="denseBtn" class="secondary" title="50 random segments">Dense</button>
-          <button id="starBtn" class="secondary" title="Radiating lines">Star</button>
+          <button id="uShapeBtn" title="Standard U-Shape test case">U-Shape</button>
+          <button id="crossBtn" title="Crossing lines test case">Cross</button>
+          <button id="combBtn" title="Interleaving bars">Comb</button>
+          <button id="spiralBtn" title="Square spiral">Spiral</button>
+          <button id="mazeBtn" title="Random grid maze">Maze</button>
+          <button id="staircaseBtn" title="Monotonic steps">Staircase</button>
+          <button id="denseBtn" title="50 random segments">Dense</button>
+          <button id="starBtn" title="Radiating lines">Star</button>
       </div>
     </div>
 
@@ -49,9 +50,6 @@ app.innerHTML = `
       Ready.<br>
       Obstacles: 0
     </div>
-    
-    <h3>Instructions</h3>
-    <small>Drag on canvas to draw lines.</small>
   </div>
   <div class="main">
     <canvas id="canvas"></canvas>
