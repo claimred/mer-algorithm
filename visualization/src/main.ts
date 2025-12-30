@@ -11,6 +11,10 @@ app.innerHTML = `
     
     <div class="controls">
       <h3>Actions</h3>
+      <div class="grid-2">
+         <button id="undoBtn" class="secondary" disabled>Undo (Ctrl+Z)</button>
+         <button id="redoBtn" class="secondary" disabled>Redo (Ctrl+Y)</button>
+      </div>
       <button id="solveBtn">Solve</button>
       <button id="clearBtn" class="secondary">Clear</button>
       <button id="randomBtn" class="secondary">Randomize</button>
@@ -56,6 +60,10 @@ app.innerHTML = `
 
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
 const stats = document.querySelector<HTMLDivElement>('#stats')!;
+// Buttons
+const undoBtn = document.querySelector<HTMLButtonElement>('#undoBtn')!;
+const redoBtn = document.querySelector<HTMLButtonElement>('#redoBtn')!;
+
 const renderer = new Renderer(canvas);
 const state = new State();
 
@@ -120,6 +128,10 @@ function updateStats(msg?: string) {
       Obstacles: ${state.obstacles.length}<br>
       ${msg || ''}
     `;
+
+    // Update button states
+    undoBtn.disabled = !state.canUndo();
+    redoBtn.disabled = !state.canRedo();
 }
 
 
@@ -147,6 +159,44 @@ canvas.addEventListener('mouseup', () => {
         updateStats();
     }
 });
+
+// Undo/Redo Logic
+function performUndo() {
+    if (state.canUndo()) {
+        state.undo();
+        draw();
+        updateStats('Undone.');
+    }
+}
+
+function performRedo() {
+    if (state.canRedo()) {
+        state.redo();
+        draw();
+        updateStats('Redone.');
+    }
+}
+
+undoBtn.addEventListener('click', performUndo);
+redoBtn.addEventListener('click', performRedo);
+
+// Keyboard Shortcuts
+window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+                performRedo();
+            } else {
+                performUndo();
+            }
+        } else if (e.key === 'y') {
+            e.preventDefault();
+            performRedo();
+        }
+    }
+});
+
 
 // Buttons
 // Debug Controls
