@@ -42,10 +42,12 @@ We follow a strict **Feature Branch Workflow**.
     npm test
     ```
 
-3.  **Run Arbitrary Obstacle Debug**:
+3.  **Run Recursive Debug**:
     ```bash
-    npx tsx debug_arbitrary.ts
+    npx tsx debug.ts
     ```
+
+    *Note: Most interactive debugging is now done via the visualizer.*
 
 ## Visualization
 
