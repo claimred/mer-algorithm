@@ -18,6 +18,7 @@ Based on the paper:
 *   **Coordinate Splitting D&C**: Efficient $O(n \log^2 n)$ divide-and-conquer strategy.
 *   **TypeScript Implementation**: Fully typed and modular.
 *   **Optimization**: Uses staircase constraint envelopes.
+*   **Undo/Redo**: Full state history for obstacle manipulation.
 
 ## Contributing
 
@@ -46,9 +47,9 @@ We follow a strict **Feature Branch Workflow**.
     ```
 
 ## Visualization
- 
+
  A web-based visualizer is available to interactively test and debug the algorithm.
- 
+
  1.  **Navigate to directory**:
      ```bash
      cd visualization
@@ -57,13 +58,14 @@ We follow a strict **Feature Branch Workflow**.
      ```bash
      npm run dev
      ```
- 
+
  See [visualization/README.md](./visualization/README.md) for more details.
- 
- 66:     *   `mer_solver.ts`: Main D&C solver (Coordinate Splitting)
-67:     *   `staircase.ts`: "Stair" data structure for quadrant constraints
-68:     *   `geometry.ts`: Geometric primitives (Segment, Point, Rectangle)
-69: *   `tests/`: Vitest test suite
+
+### Code Structure
+*   `src/mer_solver.ts`: Main D&C solver (Coordinate Splitting)
+*   `src/staircase.ts`: "Stair" data structure for quadrant constraints
+*   `src/geometry.ts`: Geometric primitives (Segment, Point, Rectangle)
+*   `tests/`: Vitest test suite
 
 ## Recent Updates (v1.0.1)
 - **Refactoring**: Core logic broken down into smaller, readable functions (`processVerticalSplit`, `handleSlopedSegment`).
