@@ -73,35 +73,7 @@ export function rectArea(r: Rectangle): number {
     return r.width * r.height;
 }
 
-/**
- * Optimizes the quadratic function f(x) = ax^2 + bx + c within the distinct interval [minX, maxX].
- * Checks boundary points and the vertex (critical point) if it lies within the interval.
- * 
- * @returns The x value maximizing the function and the maximum value itself.
- */
-export function maximizeQuadratic(a: number, b: number, c: number, minX: number, maxX: number): { x: number, val: number } {
-    // Critical point at x = -b / (2a)
-    const candidates = [minX, maxX];
-    if (Math.abs(a) > 1e-9) {
-        const crit = -b / (2 * a);
-        if (crit >= minX && crit <= maxX) {
-            candidates.push(crit);
-        }
-    }
 
-    let bestX = minX;
-    let bestVal = -Infinity;
-
-    for (const x of candidates) {
-        const val = a * x * x + b * x + c;
-        if (val > bestVal) {
-            bestVal = val;
-            bestX = x;
-        }
-    }
-
-    return { x: bestX, val: bestVal };
-}
 
 /**
  * Checks if a segment intersects the STRICT interior of a rectangle.
